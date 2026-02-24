@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "AI Shopping Assistant (MVP)",
+  "version": "1.0.0",
+  "description": "Reads visible product cards and shows them in popup",
+
+  "permissions": ["activeTab"],
+  "host_permissions": ["<all_urls>"],
+
+  "action": {
+    "default_popup": "index.html"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
