@@ -1,25 +1,17 @@
-import os
 import json
 import re
+import requests
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langdetect import detect
-from dotenv import load_dotenv
-from openai import OpenAI
 
 # -----------------------
 # Setup
 # -----------------------
-load_dotenv()
-
-api_key = os.getenv("OPENAI_API_KEY", "").strip()
-client = OpenAI(api_key=api_key) if api_key else None
-
 app = FastAPI()
 
-# Dev CORS (allow extension to call backend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # dev only
@@ -51,16 +43,10 @@ def safe_detect(text: str) -> str:
         return "unknown"
 
 def safe_json_extract(text: str):
-    """
-    LLM sometimes returns JSON inside ```json fences or adds extra text.
-    This tries:
-    1) direct json.loads
-    2) extract first {...} block and parse
-    """
     if not text:
         return None
 
-    # Remove code fences if present
+    # Remove fences if present
     text = re.sub(r"```json", "", text, flags=re.IGNORECASE)
     text = re.sub(r"```", "", text)
     text = text.strip()
@@ -71,7 +57,7 @@ def safe_json_extract(text: str):
     except Exception:
         pass
 
-    # Try extracting first JSON object
+    # Try extracting first {...} block
     match = re.search(r"\{.*\}", text, flags=re.DOTALL)
     if match:
         try:
@@ -81,17 +67,31 @@ def safe_json_extract(text: str):
 
     return None
 
-def call_llm_translate_explain(req: AnalyzeRequest, detected_lang: str) -> dict:
-    if client is None:
-        raise Exception("OPENAI_API_KEY is missing. backend/.env дотор OPENAI_API_KEY=sk-... гэж зөв тавь.")
+def ollama_generate(prompt: str, model: str = "llama3.1:8b") -> str:
+    """
+    Calls local Ollama server using /api/generate (most compatible).
+    Ollama should be running at http://127.0.0.1:11434
+    """
+    url = "http://127.0.0.1:11434/api/generate"
 
-    system = (
-        "Та онлайн худалдааны AI туслах. "
-        "Таны зорилго: хэлний саадыг арилгах. "
-        "Оролтын хэл (англи/хятад гэх мэт) ямар ч байсан Монгол хэлээр ойлгомжтой, хэрэглэгчдэд ээлтэй хариул."
-    )
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False
+    }
 
-    user = f"""
+    r = requests.post(url, json=payload, timeout=120)
+    r.raise_for_status()
+    data = r.json()
+
+    # /api/generate returns {"response": "...", ...}
+    return (data.get("response") or "").strip()
+
+def translate_and_explain(req: AnalyzeRequest, detected_lang: str) -> dict:
+    prompt = f"""
+Та онлайн худалдааны AI туслах.
+Зорилго: Хэлний саадыг арилгах.
+
 Бүтээгдэхүүний мэдээлэл:
 - Title: {req.title}
 - Price: {req.price}
@@ -99,41 +99,38 @@ def call_llm_translate_explain(req: AnalyzeRequest, detected_lang: str) -> dict:
 - URL: {req.url}
 - Detected language: {detected_lang}
 
+Хэрэглэгчийн асуулт:
+{req.question if req.question else "Асуулт байхгүй"}
+
 Даалгавар:
-1) Title, Description-ийг Монгол хэл рүү ОРЧУУЛ.
+1) Title, Description/Text-ийг Монгол хэл рүү ОРЧУУЛ.
 2) Хэрэглэгчид ойлгомжтой байдлаар товч тайлбар (юунд хэрэгтэй, юуг анхаарах).
 3) Хэрвээ хэрэглэгч асуулттай бол тусад нь Монгол хэлээр хариул.
 
-Зөвхөн JSON буцаа. Өөр тайлбар бүү нэм.
-Формат:
+ЗӨВХӨН JSON буцаа.
+- Код блок (``` ) ашиглахгүй.
+- JSON-оос өөр текст бүү нэм.
+
+Формат яг ийм:
 {{
   "mn_title": "...",
   "mn_description": "...",
   "ai_explanation": "...",
-  "question_answer": "..."  // асуулт байхгүй бол хоосон string
+  "question_answer": "..." 
 }}
 """
 
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.2,
-    )
+    raw = ollama_generate(prompt)
 
-    raw = (resp.choices[0].message.content or "").strip()
-
-    # ✅ DEBUG: print raw LLM response
-    print("\n=== LLM RAW RESPONSE START ===")
+    # DEBUG
+    print("\n=== OLLAMA RAW START ===")
     print(raw)
-    print("=== LLM RAW RESPONSE END ===\n")
+    print("=== OLLAMA RAW END ===\n")
 
     parsed = safe_json_extract(raw)
     if not parsed:
         snippet = raw[:400].replace("\n", " ")
-        raise Exception(f"LLM JSON parse failed. Snippet: {snippet}")
+        raise Exception(f"Ollama JSON parse failed. Snippet: {snippet}")
 
     # Ensure keys exist
     parsed.setdefault("mn_title", "")
@@ -156,7 +153,7 @@ def analyze(req: AnalyzeRequest):
     lang = safe_detect(combined)
 
     try:
-        out = call_llm_translate_explain(req, lang)
+        out = translate_and_explain(req, lang)
 
         explanation = (
             f"📌 Монгол нэр: {out.get('mn_title','')}\n"
@@ -168,7 +165,10 @@ def analyze(req: AnalyzeRequest):
         )
 
         if (req.question or "").strip():
-            explanation += f"\n❓Асуулт: {req.question}\n👉 Хариу: {out.get('question_answer','')}\n"
+            explanation += (
+                f"\n❓Асуулт: {req.question}\n"
+                f"👉 Хариу: {out.get('question_answer','')}\n"
+            )
 
         return {
             "detected_language": lang,
@@ -180,7 +180,6 @@ def analyze(req: AnalyzeRequest):
         }
 
     except Exception as e:
-        # ✅ DEBUG: show exact error in popup
         return {
             "detected_language": lang,
             "error": str(e),
