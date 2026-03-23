@@ -6,24 +6,19 @@ const api = {
 };
 
 export default function App() {
-  // data
   const [products, setProducts] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  // page translate toggle
   const [pageMn, setPageMn] = useState(false);
   const [pageMsg, setPageMsg] = useState("");
 
-  // status
-  const [status, setStatus] = useState("ready"); // ready | loading | asking | error
+  const [status, setStatus] = useState("ready");
   const [error, setError] = useState("");
 
-  // analyze output
   const [mnTitle, setMnTitle] = useState("");
   const [mnDesc, setMnDesc] = useState("");
 
-  // chat
-  const [chat, setChat] = useState([]); // {role:'user'|'ai', text}
+  const [chat, setChat] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const chatBoxRef = useRef(null);
 
@@ -47,6 +42,33 @@ export default function App() {
     setMnDesc("");
   };
 
+  const renderMessageWithLinks = (text) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = String(text || "").split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "#69B7FF",
+              textDecoration: "underline",
+              wordBreak: "break-all",
+              fontWeight: 600,
+            }}
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   const loadProducts = () => {
     setStatus("loading");
     setError("");
@@ -63,10 +85,11 @@ export default function App() {
 
       chrome.tabs.sendMessage(tabId, { action: "MVP_EXTRACT" }, (res) => {
         if (chrome.runtime.lastError) {
-          setError("Content script ажиллахгүй байна. Page refresh (F5) + Extension reload.");
+          setError("Content script ажиллахгүй байна. Opera extension reload + page refresh (F5) хий.");
           setStatus("error");
           return;
         }
+
         setProducts(res?.products || []);
         setSelectedIndex((res?.products || []).length ? 0 : -1);
         setStatus("ready");
@@ -135,7 +158,7 @@ export default function App() {
       setMnTitle(data?.mn?.title || "");
       setMnDesc(data?.mn?.description || "");
       setStatus("ready");
-    } catch (e) {
+    } catch {
       setStatus("error");
       setError("Backend холбогдсонгүй. Python server асаалттай эсэхийг шалга.");
     }
@@ -160,21 +183,75 @@ export default function App() {
           product_price: selected?.price || "",
           product_url: selected?.url || "",
           product_description: selected?.description || selected?.rawText || "",
+          page_url: "",
+          detected_language: "",
         }),
       });
 
       const data = await res.json();
       if (data?.error) setError(String(data.error));
 
-      setChat((prev) => [...prev, { role: "ai", text: data.answer || "Хариу хоосон байна." }]);
-      setStatus("ready");
-    } catch (e) {
+      setChat((prev) => [
+        ...prev,
+        { role: "ai", text: data.answer || "Хариу хоосон байна." },
+      ]);
+
+      // Search intent
+      if (data?.intent === "search" && data?.search_query) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          const tabId = tabs?.[0]?.id;
+          if (!tabId) {
+            setError("Search хийх tab олдсонгүй.");
+            return;
+          }
+
+          chrome.scripting.executeScript(
+            {
+              target: { tabId },
+              files: ["content.js"],
+            },
+            () => {
+              if (chrome.runtime.lastError) {
+                setError("Content script inject чадсангүй. Opera extension reload + F5 хий.");
+                setStatus("error");
+                return;
+              }
+
+              chrome.tabs.sendMessage(
+                tabId,
+                {
+                  action: "SMART_SEARCH",
+                  query: data.search_query,
+                },
+                (res) => {
+                  if (chrome.runtime.lastError) {
+                    setError("Shop search ажиллуулж чадсангүй. Opera extension reload + F5 хий.");
+                    setStatus("error");
+                    return;
+                  }
+
+                  if (!res?.ok) {
+                    setError(res?.error || "Search action алдаа гарлаа.");
+                    setStatus("error");
+                    return;
+                  }
+
+                  setPageMsg(`🔍 Shop дотор хайж байна: "${data.search_query}"`);
+                  setStatus("ready");
+                }
+              );
+            }
+          );
+        });
+      } else {
+        setStatus("ready");
+      }
+    } catch {
       setStatus("error");
       setError("Backend холбогдсонгүй (chat). Python server асаалттай эсэхийг шалга.");
     }
   };
 
-  // ---------------- UI styles ----------------
   const S = {
     wrap: {
       width: 400,
@@ -183,7 +260,12 @@ export default function App() {
       background: "#0F1115",
       fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial",
     },
-    topRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
+    topRow: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
     title: { fontSize: 14, fontWeight: 800, letterSpacing: 0.2 },
     pill: (tone) => ({
       fontSize: 11,
@@ -196,8 +278,7 @@ export default function App() {
           : tone === "warn"
           ? "rgba(255,208,0,0.12)"
           : "rgba(255,80,80,0.12)",
-      color:
-        tone === "ok" ? "#62FBC5" : tone === "warn" ? "#FFD26A" : "#FF7A7A",
+      color: tone === "ok" ? "#62FBC5" : tone === "warn" ? "#FFD26A" : "#FF7A7A",
       whiteSpace: "nowrap",
     }),
     btn: (variant = "primary", disabled = false) => ({
@@ -220,15 +301,6 @@ export default function App() {
       background: "rgba(255,255,255,0.04)",
       borderRadius: 14,
       padding: 10,
-    },
-    input: {
-      width: "100%",
-      borderRadius: 12,
-      border: "1px solid rgba(255,255,255,0.10)",
-      background: "rgba(0,0,0,0.25)",
-      color: "#EDEDED",
-      padding: "10px 10px",
-      outline: "none",
     },
     textarea: {
       width: "100%",
@@ -269,7 +341,7 @@ export default function App() {
       borderRadius: 12,
       marginBottom: 8,
       whiteSpace: "pre-wrap",
-      lineHeight: 1.25,
+      lineHeight: 1.35,
       fontSize: 12.5,
       alignSelf: role === "user" ? "flex-end" : "flex-start",
       background:
@@ -277,26 +349,46 @@ export default function App() {
           ? "linear-gradient(180deg, rgba(114,168,255,0.40), rgba(114,168,255,0.18))"
           : "rgba(255,255,255,0.07)",
       border: "1px solid rgba(255,255,255,0.10)",
+      wordBreak: "break-word",
     }),
-    hr: { height: 1, background: "rgba(255,255,255,0.08)", border: "none", margin: "10px 0" },
+    hr: {
+      height: 1,
+      background: "rgba(255,255,255,0.08)",
+      border: "none",
+      margin: "10px 0",
+    },
     small: { fontSize: 11, color: "rgba(237,237,237,0.70)" },
     row: { display: "flex", gap: 8, alignItems: "center" },
   };
 
-  const statusTone = status === "ready" ? "ok" : status === "loading" || status === "asking" ? "warn" : "bad";
+  const statusTone =
+    status === "ready"
+      ? "ok"
+      : status === "loading" || status === "asking"
+      ? "warn"
+      : "bad";
 
   return (
     <div style={S.wrap}>
-      {/* Header */}
       <div style={S.topRow}>
         <div style={S.title}>🛒 Орчуулгатай Худалдааны Туслах</div>
         <div style={S.pill(statusTone)}>
-          {status === "ready" ? "Ready" : status === "loading" ? "Loading" : status === "asking" ? "Working" : "Error"}
+          {status === "ready"
+            ? "Ready"
+            : status === "loading"
+            ? "Loading"
+            : status === "asking"
+            ? "Working"
+            : "Error"}
         </div>
       </div>
 
       <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-        <button style={S.btn("secondary", status === "loading")} onClick={loadProducts} disabled={status === "loading"}>
+        <button
+          style={S.btn("secondary", status === "loading")}
+          onClick={loadProducts}
+          disabled={status === "loading"}
+        >
           ↻ Refresh бүтээгдэхүүн
         </button>
         <button style={S.btn("secondary")} onClick={toggleWholePage}>
@@ -307,13 +399,23 @@ export default function App() {
       {(pageMsg || error) && (
         <div style={{ marginTop: 8, ...S.card }}>
           {pageMsg && <div style={{ fontSize: 12, color: "#62FBC5" }}>{pageMsg}</div>}
-          {error && <div style={{ fontSize: 12, color: "#FF7A7A", marginTop: pageMsg ? 6 : 0 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: "#FF7A7A", marginTop: pageMsg ? 6 : 0 }}>
+              {error}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Product List */}
       <div style={{ marginTop: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
           <div style={{ fontWeight: 800, fontSize: 12 }}>Бүтээгдэхүүн</div>
           <div style={S.small}>Олдсон: {products.length}</div>
         </div>
@@ -325,7 +427,11 @@ export default function App() {
             </div>
           ) : (
             products.map((p, i) => (
-              <div key={i} style={S.item(i === selectedIndex)} onClick={() => setSelectedIndex(i)}>
+              <div
+                key={i}
+                style={S.item(i === selectedIndex)}
+                onClick={() => setSelectedIndex(i)}
+              >
                 <div style={S.itemTitle}>{p.title}</div>
                 <div style={S.itemSub}>Үнэ: {p.price || "?"}</div>
               </div>
@@ -344,28 +450,39 @@ export default function App() {
         </button>
       </div>
 
-      {/* Analyze Output */}
       {(mnTitle || mnDesc) && (
         <div style={{ marginTop: 10, ...S.card }}>
           <div style={{ fontWeight: 900, fontSize: 12 }}>📌 Монгол орчуулга</div>
           {mnTitle && <div style={{ marginTop: 6, fontSize: 13, fontWeight: 800 }}>{mnTitle}</div>}
-          {mnDesc && <div style={{ marginTop: 6, fontSize: 12.5, whiteSpace: "pre-wrap", color: "rgba(237,237,237,0.85)" }}>{mnDesc}</div>}
+          {mnDesc && (
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 12.5,
+                whiteSpace: "pre-wrap",
+                color: "rgba(237,237,237,0.85)",
+              }}
+            >
+              {mnDesc}
+            </div>
+          )}
         </div>
       )}
 
       <hr style={S.hr} />
 
-      {/* Chat */}
       <div style={{ fontWeight: 900, fontSize: 12, marginBottom: 6 }}>💬 Chat</div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div ref={chatBoxRef} style={S.chatBox}>
           {chat.length === 0 ? (
-            <div style={S.small}>Энд чат эхэлнэ. (ж: “Энэ бараа надад тохирох уу?”)</div>
+            <div style={S.small}>
+              Энд чат эхэлнэ. (ж: “Энэ бараа надад тохирох уу?”, “gaming mouse байна уу?”)
+            </div>
           ) : (
             chat.map((m, idx) => (
               <div key={idx} style={S.bubble(m.role)}>
-                {m.text}
+                {renderMessageWithLinks(m.text)}
               </div>
             ))
           )}
@@ -386,7 +503,11 @@ export default function App() {
           />
         </div>
 
-        <button style={S.btn("secondary", status === "asking")} onClick={sendChat} disabled={status === "asking"}>
+        <button
+          style={S.btn("secondary", status === "asking")}
+          onClick={sendChat}
+          disabled={status === "asking"}
+        >
           {status === "asking" ? "Илгээж байна..." : "Send"}
         </button>
 

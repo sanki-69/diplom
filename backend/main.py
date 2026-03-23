@@ -49,7 +49,6 @@ class AnalyzeRequest(BaseModel):
 
 
 class PageTranslateRequest(BaseModel):
-    # whole page text nodes (heavy)
     texts: List[str] = []
 
 
@@ -90,11 +89,6 @@ def sha_key(*parts: str) -> str:
 # LRU + TTL CACHE
 # -----------------------
 class LruTtlCache:
-    """
-    Simple in-memory cache:
-    - LRU eviction
-    - TTL expiration
-    """
     def __init__(self, max_items: int = 2000, ttl_seconds: int = 60 * 30):
         self.max_items = max_items
         self.ttl_seconds = ttl_seconds
@@ -106,37 +100,30 @@ class LruTtlCache:
             return None
         ts, val = item
         if (time.time() - ts) > self.ttl_seconds:
-            # expired
             try:
                 del self._store[key]
             except Exception:
                 pass
             return None
-        # mark as recently used
         self._store.move_to_end(key, last=True)
         return val
 
     def set(self, key: str, val: Any) -> None:
         self._store[key] = (time.time(), val)
         self._store.move_to_end(key, last=True)
-        # evict
         while len(self._store) > self.max_items:
             self._store.popitem(last=False)
 
 
-ANALYZE_CACHE = LruTtlCache(max_items=2000, ttl_seconds=60 * 60)     # 1h
-CHAT_CACHE = LruTtlCache(max_items=1500, ttl_seconds=60 * 20)        # 20m
-TRANSLATE_CACHE = LruTtlCache(max_items=20000, ttl_seconds=60 * 60)  # 1h per line
+ANALYZE_CACHE = LruTtlCache(max_items=2000, ttl_seconds=60 * 60)
+CHAT_CACHE = LruTtlCache(max_items=1500, ttl_seconds=60 * 20)
+TRANSLATE_CACHE = LruTtlCache(max_items=20000, ttl_seconds=60 * 60)
 
 
 # -----------------------
 # GEMINI CORE (retry/backoff)
 # -----------------------
 def _parse_retry_seconds(msg: str) -> Optional[int]:
-    """
-    Example includes:
-    'Please retry in 40.802218283s.' or RetryInfo retryDelay '40s'
-    """
     m = re.search(r"retry in\s+(\d+)", msg, flags=re.IGNORECASE)
     if m:
         try:
@@ -156,7 +143,7 @@ def gemini_generate_json(prompt: str, schema: Any, max_retries: int = 4) -> Any:
     if client is None:
         raise Exception("GEMINI_API_KEY байхгүй байна. backend/.env дотор GEMINI_API_KEY=... гэж тавь.")
 
-    base_wait = 6  # seconds
+    base_wait = 6
     for attempt in range(max_retries):
         try:
             result = client.models.generate_content(
@@ -170,11 +157,9 @@ def gemini_generate_json(prompt: str, schema: Any, max_retries: int = 4) -> Any:
             )
             raw = (result.text or "").strip()
 
-            # Direct JSON
             try:
                 return json.loads(raw)
             except Exception:
-                # Extract first JSON block
                 m = re.search(r"(\{.*\}|\[.*\])", raw, flags=re.DOTALL)
                 if m:
                     return json.loads(m.group(1))
@@ -183,17 +168,14 @@ def gemini_generate_json(prompt: str, schema: Any, max_retries: int = 4) -> Any:
         except Exception as e:
             msg = str(e)
 
-            # 429 / RESOURCE_EXHAUSTED handling
             if ("RESOURCE_EXHAUSTED" in msg) or ("429" in msg):
                 retry_s = _parse_retry_seconds(msg)
                 if retry_s is None:
-                    retry_s = base_wait * (2 ** attempt)  # 6,12,24,48
-                # small cushion
+                    retry_s = base_wait * (2 ** attempt)
                 retry_s = int(retry_s) + 2
                 time.sleep(retry_s)
                 continue
 
-            # other errors -> raise
             raise
 
     raise Exception("429: Quota хэтэрсэн байна. Түр хүлээгээд дахин оролдоорой.")
@@ -206,7 +188,6 @@ def do_analyze(req: AnalyzeRequest) -> Dict[str, Any]:
     combined = f"{req.title}\n{req.description}".strip()
     lang = safe_detect(combined)
 
-    # Cache by product payload (+ question)
     k = sha_key("analyze", req.title, req.price, req.url, req.description, req.question)
     cached = ANALYZE_CACHE.get(k)
     if cached:
@@ -263,22 +244,32 @@ def do_analyze(req: AnalyzeRequest) -> Dict[str, Any]:
 def do_chat(req: ChatRequest) -> Dict[str, Any]:
     msg = (req.message or "").strip()
     if not msg:
-        return {"answer": ""}
+        return {"answer": "", "intent": "chat", "search_query": ""}
 
-    # cache (same msg + same selected product context)
-    k = sha_key("chat", req.message, req.product_title, req.product_price, req.product_url, req.product_description)
+    k = sha_key(
+        "chat",
+        req.message,
+        req.product_title,
+        req.product_price,
+        req.product_url,
+        req.product_description,
+    )
     cached = CHAT_CACHE.get(k)
     if cached:
         return cached
 
     schema = {
         "type": "object",
-        "properties": {"answer": {"type": "string"}},
-        "required": ["answer"],
+        "properties": {
+            "answer": {"type": "string"},
+            "intent": {"type": "string"},
+            "search_query": {"type": "string"},
+        },
+        "required": ["answer", "intent", "search_query"],
     }
 
     prompt = f"""
-Та онлайн худалдааны чат туслах.
+Та онлайн худалдааны AI чат туслах.
 Хариуг ЗААВАЛ Монгол кирилл үсгээр өг.
 
 Контекст:
@@ -290,25 +281,44 @@ def do_chat(req: ChatRequest) -> Dict[str, Any]:
 Хэрэглэгчийн мессеж:
 {trunc(req.message, 900)}
 
-Дүрэм:
-- Ойлгомжтой, товч, хэрэгтэй зөвлөгөө өг.
-- Мэдээлэл дутуу бол 1-2 тодруулах асуулт асуу.
-- “monglish” (латин монгол) байвал ойлгоод кириллээр хариул.
+Даалгавар:
+1) Хэрвээ хэрэглэгч shop дотроос бараа хайхыг хүсэж байвал intent = "search"
+2) Үгүй бол intent = "chat"
+3) Хэрвээ intent = "search" бол search_query-д англи хэл дээр богино, ойлгомжтой keyword өг
+   Жишээ:
+   - "хүүхдийн хувцас байна уу" -> "baby clothes"
+   - "gaming mouse хайгаад өг" -> "gaming mouse"
+   - "computer stuff" -> "computer accessories"
+4) answer талбарт хэрэглэгчид Монгол хэлээр юу хийж байгаагаа товч тайлбарла
+5) “monglish” байвал ойлгоод кириллээр хариул
 
 Зөвхөн JSON буцаа.
+
+JSON format:
+{{
+  "answer": "...",
+  "intent": "search" эсвэл "chat",
+  "search_query": "..."
+}}
 """
 
     out = gemini_generate_json(prompt, schema)
-    resp = {"answer": out.get("answer", "")}
+
+    intent = out.get("intent", "chat")
+    if intent not in ["chat", "search"]:
+        intent = "chat"
+
+    resp = {
+        "answer": out.get("answer", ""),
+        "intent": intent,
+        "search_query": out.get("search_query", ""),
+    }
+
     CHAT_CACHE.set(k, resp)
     return resp
 
 
 def _chunk_texts_for_page(texts: List[str], max_chars_per_chunk: int = 7000) -> List[List[str]]:
-    """
-    Whole-page translation is heavy.
-    We batch many short texts into one request to reduce request count.
-    """
     chunks: List[List[str]] = []
     cur: List[str] = []
     cur_len = 0
@@ -320,10 +330,8 @@ def _chunk_texts_for_page(texts: List[str], max_chars_per_chunk: int = 7000) -> 
             continue
 
         if len(s) > 800:
-            # Too long text node -> truncate to avoid huge prompts
             s = s[:800] + "…"
 
-        # if exceed chunk
         if cur_len + len(s) + 1 > max_chars_per_chunk and cur:
             chunks.append(cur)
             cur = []
@@ -339,26 +347,16 @@ def _chunk_texts_for_page(texts: List[str], max_chars_per_chunk: int = 7000) -> 
 
 
 def do_translate_page(texts: List[str]) -> Dict[str, Any]:
-    """
-    Heavy: translate many text nodes.
-    Strategy:
-    1) per-line cache (TRANSLATE_CACHE)
-    2) only send uncached texts to Gemini
-    3) batch into chunks to reduce request count
-    """
     if not texts:
         return {"translated": []}
 
-    # Keep original length/order
     translated: List[str] = [""] * len(texts)
 
-    # Decide which need translation
     uncached_indices: List[int] = []
     uncached_texts: List[str] = []
 
     for i, t in enumerate(texts):
         t0 = t or ""
-        # Fast skip: whitespace-only
         if not t0.strip():
             translated[i] = t0
             continue
@@ -371,18 +369,15 @@ def do_translate_page(texts: List[str]) -> Dict[str, Any]:
             uncached_indices.append(i)
             uncached_texts.append(t0)
 
-    # If everything cached
     if not uncached_texts:
         return {"translated": translated}
 
-    # batch
     chunks = _chunk_texts_for_page(uncached_texts, max_chars_per_chunk=6500)
 
     schema = {"type": "array", "items": {"type": "string"}}
 
     out_texts: List[str] = []
     for chunk in chunks:
-        # IMPORTANT: order must be preserved for this chunk
         prompt = (
             "Дараах JSON массив дахь мөр бүрийг Монгол хэл рүү орчуул. "
             "Дарааллыг яг хэвээр хадгал. Зөвхөн JSON array буцаа.\n\n"
@@ -391,16 +386,15 @@ def do_translate_page(texts: List[str]) -> Dict[str, Any]:
         arr = gemini_generate_json(prompt, schema)
         if not isinstance(arr, list):
             raise Exception("Translate response is not array")
-        # normalize length
+
         if len(arr) != len(chunk):
-            # If mismatch, best-effort: pad/cut
             if len(arr) < len(chunk):
                 arr = arr + [""] * (len(chunk) - len(arr))
             else:
                 arr = arr[: len(chunk)]
+
         out_texts.extend([str(x) for x in arr])
 
-    # Put back into translated in original indices + cache them
     for idx, mn in zip(uncached_indices, out_texts):
         original = texts[idx] or ""
         if not original.strip():
@@ -433,14 +427,18 @@ def chat(req: ChatRequest):
     try:
         return do_chat(req)
     except Exception as e:
-        return {"error": str(e), "answer": "ALDAA: Chat дээр алдаа гарлаа."}
+        return {
+            "error": str(e),
+            "answer": "ALDAА: Chat дээр алдаа гарлаа.",
+            "intent": "chat",
+            "search_query": "",
+        }
 
 
 @app.post("/translate_page")
 def translate_page(req: PageTranslateRequest):
     try:
-        # Heavy mode: you may send huge amount; keep it somewhat safe
-        texts = req.texts[:1200]  # hard cap to prevent popup freeze
+        texts = req.texts[:1200]
         return do_translate_page(texts)
     except Exception as e:
         return {"error": str(e)}
