@@ -1,0 +1,11 @@
+
+# Secrets and local-only files (never push these)
+backend/.env
+.env
+backend/venv/
+__pycache__/
+*.pyc
+backend/*.db
+*.synctex*
+thesis.log
+*.log

@@ -1,0 +1,33 @@
+# Render blueprint for the AI Shop backend (FastAPI).
+# Render → New → Blueprint → pick this repo. It asks for every value marked
+# `sync: false`; paste them from backend/.env (MONGODB_URL = your Atlas string).
+services:
+  - type: web
+    name: aishop-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: SECRET_KEY
+        generateValue: true          # Render creates a random secret for you
+      - key: MONGODB_URL
+        sync: false                  # mongodb+srv://... from MongoDB Atlas
+      - key: MONGODB_DB
+        value: aishop
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: GROQ_CHAT_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_FAST_MODEL
+        value: openai/gpt-oss-20b

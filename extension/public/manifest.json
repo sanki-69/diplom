@@ -1,14 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "AI Shopping Assistant (MVP)",
-  "version": "1.0.0",
-  "description": "Reads visible product cards and shows them in popup",
+  "name": "AI Shopping Assistant",
+  "version": "2.0.0",
+  "description": "AI-powered Mongolian shopping assistant with floating chat widget",
 
-  "permissions": ["activeTab"],
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "permissions": ["activeTab", "scripting", "tabs"],
   "host_permissions": ["<all_urls>"],
 
-  "action": {
-    "default_popup": "index.html"
+  "icons": {
+    "16": "vite.svg",
+    "48": "vite.svg",
+    "128": "vite.svg"
   },
 
   "content_scripts": [

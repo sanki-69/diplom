@@ -23,7 +23,17 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Capitalised names are React components used in JSX, which this rule can't see
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // `try { ... } catch {}` is used on purpose for best-effort browser APIs
+      'no-empty': ['error', { allowEmptyCatch: true }],
+    },
+  },
+  {
+    // Chrome extension scripts (content script + service worker) use the `chrome` API
+    files: ['public/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.webextensions },
     },
   },
 ])

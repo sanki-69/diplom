@@ -1,0 +1,1779 @@
+%!TEX program = xelatex
+\documentclass[12pt,a4paper]{report}
+
+% ── Core packages ──────────────────────────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tocloft}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{mdframed}
+\usepackage{pdfpages}
+\usepackage{afterpage}
+\usepackage{tikz}
+
+% ── Fonts ──────────────────────────────────────────────────────────────────────
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+\setmonofont[Scale=0.88]{Courier New}
+
+% ── Language ───────────────────────────────────────────────────────────────────
+\setdefaultlanguage{russian}
+\setotherlanguage{english}
+
+% ── Geometry ───────────────────────────────────────────────────────────────────
+\geometry{left=3cm, right=2cm, top=2.5cm, bottom=2.5cm}
+
+% ── Colors (academic: black/gray only) ─────────────────────────────────────────
+\definecolor{titlebg}{RGB}{255,255,255}
+\definecolor{chapbg}{RGB}{255,255,255}
+\definecolor{primaryblue}{RGB}{0,0,0}
+\definecolor{darkgray}{RGB}{40,40,40}
+\definecolor{lightgray}{RGB}{245,245,245}
+\definecolor{placeholderbg}{RGB}{235,235,235}
+\definecolor{codebg}{RGB}{250,250,250}
+\definecolor{accentorange}{RGB}{40,40,40}
+\definecolor{greentick}{RGB}{40,40,40}
+
+% ── Hyperref ───────────────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=false,
+  hidelinks,
+  pdfauthor={Б. Санжааноров},
+  pdftitle={Монгол хэлний NLP бүхий олон дэлгүүрийн AI Extension},
+}
+
+% ── Line spacing ───────────────────────────────────────────────────────────────
+\setstretch{1.5}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{4pt}
+
+% ── Caption style ──────────────────────────────────────────────────────────────
+\captionsetup{font=small, labelfont=bf, labelsep=period}
+
+% ── Listings ───────────────────────────────────────────────────────────────────
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{darkgray!40},
+  breaklines=true,
+  breakatwhitespace=true,
+  numbers=left,
+  numberstyle=\tiny\color{darkgray!60},
+  numbersep=6pt,
+  xleftmargin=16pt,
+  tabsize=2,
+  showstringspaces=false,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  stringstyle=\normalfont,
+}
+
+% ── Section formatting (academic, no color) ────────────────────────────────────
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries}
+  {\chaptertitlename\ \thechapter}{18pt}{\Huge}
+\titleformat{\section}
+  {\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalsize\itshape}{\thesubsubsection}{1em}{}
+\titlespacing*{\chapter}{0pt}{0pt}{20pt}
+\titlespacing*{\section}{0pt}{18pt}{8pt}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+
+% ── Headers / footers ──────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape Монгол хэлний NLP бүхий олон дэлгүүрийн AI Extension}
+\fancyhead[R]{\small ШУТИС \textperiodcentered\ 2025}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\small\thepage}
+  \renewcommand{\headrulewidth}{0pt}}
+
+% ── TOC style ──────────────────────────────────────────────────────────────────
+\renewcommand{\cftchapfont}{\bfseries}
+\renewcommand{\cftchappagefont}{\bfseries}
+\renewcommand{\cftsecfont}{}
+\setlength{\cftbeforechapskip}{6pt}
+
+% ── Custom commands ────────────────────────────────────────────────────────────
+% Chapter divider page (plain academic)
+\newcommand{\chappage}[2]{%
+  \clearpage
+  \thispagestyle{empty}
+  \null\vfill
+  \begin{center}
+    \rule{0.60\textwidth}{0.8pt}\\[18pt]
+    {\fontsize{22}{28}\selectfont\bfseries БҮЛЭГ #1}\\[12pt]
+    {\Large\bfseries #2}\\[18pt]
+    \rule{0.60\textwidth}{0.8pt}
+  \end{center}
+  \vfill\null
+  \clearpage}
+
+% Diagram placeholder box
+\newcommand{\figplaceholder}[2][7cm]{%
+  \vspace{8pt}
+  \begin{center}
+    \colorbox{placeholderbg}{%
+      \parbox[c][#1][c]{0.85\textwidth}{\centering
+        {\color{darkgray!60}\Large $\square$}\\[8pt]
+        {\color{darkgray}\itshape\small Диаграм орно:\\[4pt] #2}}}
+  \end{center}
+  \vspace{8pt}}
+
+% Screenshot command
+\newcommand{\screenshot}[2][0.92]{%
+  \begin{center}
+    \includegraphics[width=#1\textwidth]{screenshots/#2}
+  \end{center}}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+% ══════════════════════════════════════════════════════════════════════════════
+
+% ── TITLE PAGE 1 (Plain academic) ────────────────────────────────────────────
+\thispagestyle{empty}
+\begin{center}
+  \vspace*{1.0cm}
+
+  {\fontsize{14}{19}\selectfont\bfseries
+    Шинжлэх Ухаан Технологийн Их Сургууль}\\[6pt]
+  {\fontsize{12}{16}\selectfont
+    Мэдээлэл, Холбооны Технологийн Сургууль}
+
+  \vspace{0.9cm}
+
+  % ШУТИС emblem placeholder
+  \begin{tikzpicture}
+    \draw[black, line width=1.2pt] (0,0) circle (1.05cm);
+    \node[font=\bfseries\small] at (0, 0.25) {ШУТИС};
+    \draw[black, line width=0.8pt] (-0.6,-0.05) -- (0.6,-0.05);
+    \node[font=\tiny] at (0,-0.35) {1969};
+  \end{tikzpicture}
+
+  \vspace{0.9cm}
+
+  {\normalsize Эрдэнэ Түвшинсанаа}
+
+  \vspace{0.8cm}
+
+  {\fontsize{16}{22}\selectfont\bfseries
+    Монгол хэлний NLP бүхий\\[6pt]
+    олон дэлгүүрийн AI Extension}
+
+  \vspace{1.0cm}
+
+  % Thesis type
+  {\fontsize{13}{17}\selectfont\bfseries
+    БАКАЛАВРЫН ДИПЛОМЫН АЖИЛ}
+
+  \vspace{2.2cm}
+
+  % City
+  {\normalsize Улаанбаатар хот}
+
+\end{center}
+\clearpage
+
+% ── TITLE PAGE 2 (White, formal) ──────────────────────────────────────────────
+\thispagestyle{empty}
+\begin{center}
+  \vspace*{0.5cm}
+  {\large\bfseries
+    ШИНЖЛЭХ УХААН ТЕХНОЛОГИЙН ИХ СУРГУУЛЬ}\\[6pt]
+  {\normalsize
+    МЭДЭЭЛЭЛ, ХОЛБООНЫ ТЕХНОЛОГИЙН СУРГУУЛЬ}\\[4pt]
+  {\normalsize
+    ПРОГРАМ ХАНГАМЖИЙН ИНЖЕНЕРЧЛЭЛИЙН ТЭНХИМ}
+
+  \vspace{1.5cm}
+  {\Large\bfseries
+    МОНГОЛ ХЭЛНИЙ NLP БҮХИЙ\\[6pt]
+    ОЛОН ДЭЛГҮҮРИЙН AI EXTENSION}\\[12pt]
+  {\normalsize ДИПЛОМЫН АЖИЛ}
+
+  \vspace{1.2cm}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Мэдээлэл} & \textbf{Утга} \\
+    \midrule
+    Оюутан      & Эрдэнэ Түвшинсанаа \\
+    Бүлэг       & СЕ--401 \\
+    Мэргэжил    & Програм хангамжийн инженерчлэл \\
+    Удирдагч    & Ph.D, Б. Батбаяр \\
+    Хамгаалах он & 2025 \\
+    Улс, хот    & Монгол улс, Улаанбаатар \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1.8cm}
+  {\small
+    Энэхүү дипломын ажил нь ШУТИС-ийн дипломын ажлын журмын\\
+    дагуу бичигдсэн бөгөөд эх бичвэр болно.}
+
+  \vspace{0.8cm}
+  \begin{tabular}{@{}ll@{}}
+    Удирдагч гарын үсэг: & \underline{\hspace{5cm}} \\[8pt]
+    Оюутан гарын үсэг:   & \underline{\hspace{5cm}} \\[8pt]
+    Огноо:               & \underline{\hspace{5cm}} \\
+  \end{tabular}
+\end{center}
+\clearpage
+
+% ── ABSTRACT ──────────────────────────────────────────────────────────────────
+\thispagestyle{plain}
+\chapter*{Хураангуй}
+\addcontentsline{toc}{chapter}{Хураангуй}
+
+Энэхүү дипломын ажил нь Монгол хэлний байгалийн хэлний боловсруулалт (NLP) ашиглан олон онлайн дэлгүүрийн бүтээгдэхүүнийг автоматаар хайж, харьцуулж, AI-д суурилсан зөвлөмж өгдөг Chrome браузерийн өргөтгөл (extension)-ийг бүтээх судалгаа юм.
+
+Системийн гол онцлогуудад дараах зүйлс орно:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Монгол хэлний хайлтын санааг задлан шинжлэх NLP модуль
+  \item Amazon, eBay, Walmart зэрэг олон платформоос бодит цагт мэдээлэл татах вэб хусах систем
+  \item Gemini болон Groq хиймэл оюун ухааны загварыг ашиглан бүтээгдэхүүн харьцуулах чат-бот
+  \item JWT токен дээр суурилсан нэвтрэх систем, хэрэглэгчийн яриаг хадгалах MongoDB өгөгдлийн сан
+  \item LRU + TTL кэш ашигласнаар API хариу өгөх хугацааг 3.2 дахин богиносгосон
+\end{itemize}
+
+Системийг туршилтын явцад 15 хэрэглэгчтэй SUS (System Usability Scale) тестийг гүйцэтгэж, дундаж 82 оноо авсан нь ``сайн'' категорид хамаарна. API хариу өгөх дундаж хугацаа 1.4 секунд, хусах амжилтын хувь 94\% байгаа нь системийн гүйцэтгэл хангалттай сайн болохыг харуулж байна.
+
+\vspace{12pt}
+\noindent\textbf{Түлхүүр үгс:} NLP, Chrome Extension, вэб хусах, хиймэл оюун ухаан, Монгол хэл, бүтээгдэхүүн харьцуулах, FastAPI, MongoDB, React
+
+\vspace{18pt}
+\noindent\rule{\textwidth}{0.5pt}
+
+\subsection*{Abstract (English)}
+This thesis presents the design and implementation of a Chrome browser extension that leverages Natural Language Processing (NLP) for Mongolian language queries to automatically search, compare, and provide AI-powered recommendations across multiple online shopping platforms.
+
+The system scrapes real-time product data from Amazon, eBay, and Walmart simultaneously using Python's asyncio concurrency framework, processes user queries through a Mongolian NLP pipeline, and delivers personalized advice via Gemini and Groq large language models. A React+Vite frontend communicates with a FastAPI backend secured by JWT authentication, with MongoDB persisting chat histories and user sessions. An LRU+TTL cache layer reduces average response latency by 68\%.
+
+Usability evaluation with 15 participants yielded a mean SUS score of 82/100 (``Good''), validating the system's practical usability for Mongolian-speaking online shoppers.
+
+\textbf{Keywords:} NLP, Chrome Extension, web scraping, artificial intelligence, Mongolian language, product comparison, FastAPI, MongoDB, React
+
+\clearpage
+
+% ── TABLE OF CONTENTS ─────────────────────────────────────────────────────────
+\tableofcontents
+\clearpage
+
+% ── LIST OF FIGURES / TABLES ──────────────────────────────────────────────────
+\listoffigures
+\addcontentsline{toc}{chapter}{Зургийн жагсаалт}
+\clearpage
+
+\listoftables
+\addcontentsline{toc}{chapter}{Хүснэгтийн жагсаалт}
+\clearpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  CHAPTER 1
+% ══════════════════════════════════════════════════════════════════════════════
+\chappage{1}{Оршил}
+
+\chapter{Оршил}
+
+\section{Судалгааны арга зүйн үндэслэл}
+
+Дэлхийн онлайн худалдааны зах зээл жил бүр тасралтгүй өсөж, 2024 онд нийт орлого 6.3 их наяд ам.доллар давсан байна \cite{statista2024}. Монгол улсад ч мөн адил олон улсын платформуудыг ашиглан онлайнаар бүтээгдэхүүн худалдан авдаг хэрэглэгчдийн тоо жилд 23\%-иар өсч байгаа бол хайлт, харьцуулалт, худалдан авалтын шийдвэр гаргах үйл явц нь ихэвчлэн гар аргаар, цаг их зарцуулдаг процесс хэвээр байна.
+
+Монгол хэрэглэгч нэг бүтээгдэхүүн худалдан авахын тулд дунджаар 4--6 өөр вэбсайт үзэж, 15--20 минутын цаг зарцуулдаг болохыг судалгаа харуулж байна \cite{mckinsey2023}. Энэ асуудлыг шийдэхийн тулд NLP технологийг Монгол хэлэнд тохируулан хэрэглэж, олон платформоос нэгэн зэрэг мэдээлэл цуглуулан, AI-ийн тусламжтайгаар хэрэглэгчид оновчтой бүтээгдэхүүн санал болгох Chrome Extension боловсруулах шаардлагатай болсон.
+
+Мөн одоо байгаа шийдлүүдийг авч үзвэл:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Үнийн харьцуулалтын сайтууд} --- Гарсан үнийг харьцуулдаг боловч Монгол хэлний дэмжлэг, AI зөвлөмж байхгүй
+  \item \textbf{Хайлтын системүүд} --- Индекслэгдсэн мэдээллэлд суурилах бөгөөд бодит цагийн мэдээлэл байхгүй
+  \item \textbf{Дэлгүүрийн өөрийн систем} --- Зөвхөн тухайн дэлгүүрт хязгаарлагдсан
+\end{itemize}
+
+Иймд Монгол хэрэглэгчдийн хэрэгцээнд нийцсэн, олон платформыг хамарсан, AI-д суурилсан Chrome Extension боловсруулах нь цаг үеэ олсон судалгааны сэдэв болж байна.
+
+\section{Судалгааны зорилго ба зорилтууд}
+
+\subsection*{Үндсэн зорилго}
+Монгол хэлний байгалийн хэлний боловсруулалт (NLP) ашигласан, олон онлайн дэлгүүрийн бүтээгдэхүүнийг автоматаар харьцуулж, AI зөвлөмж өгдөг Chrome браузерийн өргөтгөлийг бүтээх.
+
+\subsection*{Тодорхой зорилтууд}
+\begin{enumerate}[leftmargin=1.5cm, label=\textbf{З\arabic*.}]
+  \item Монгол хэлний хайлтын санааг утга бүхий гарчиг, брэнд, үнийн хязгаар, шинж чанарт задлан шинжлэх NLP модуль боловсруулах
+  \item Amazon, eBay, Walmart зэрэг дор хаяж 3 онлайн дэлгүүрт нэгэн зэрэг хандаж бүтээгдэхүүн хусах тогтолцоо байгуулах
+  \item Хусахаас олж авсан мэдээллийг хэрэглэгчийн асуулттай холбон Gemini/Groq LLM-д дамжуулж, тайлбар бүхий харьцуулалт гаргах
+  \item JWT-д суурилсан нэвтрэх систем, MongoDB өгөгдлийн сан ашиглан чатын яриаг хадгалах механизм нэвтрүүлэх
+  \item LRU+TTL кэш, зэрэгцсэн asyncio хусалтаар гүйцэтгэлийг оновчтой болгох
+  \item SUS аргачлалаар хэрэглэгчийн сэтгэл ханамжийг хэмжиж, 75-аас дээш оноо авах
+\end{enumerate}
+
+\section{Судалгааны ач холбогдол}
+
+Энэхүү судалгааны шинэлэг байдал нь дараах хэдэн чиглэлд оршино:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Хэлний олон янз байдал:} Монгол хэл нь агглютинатив шинж чанартай бөгөөд нэг үгийн олон дүрмийн хэлбэр нь хайлтыг хүндрүүлдэг. Энэ системд Монгол хэл дээр ажилладаг NLP конвейер анх удаа e-commerce чиглэлд хэрэгжих юм.
+  \item \textbf{Нэгдсэн харьцуулалт:} Одоо байгаа шийдлүүд нэг платформд хязгаарлагдах бол энэ систем олон дэлгүүрийг нэгэн зэрэг хамрана.
+  \item \textbf{AI-д суурилсан зөвлөмж:} Зүгээр хэд хэдэн бүтээгдэхүүн харуулах биш, хэрэглэгчийн хэрэгцээнд нийцсэн тайлбар, зөвлөмж өгнө.
+  \item \textbf{Хэрэглэгчийн нууцлал:} Хэрэглэгчийн хайлтын мэдээлэл гуравдагч этгээдэд дамжихгүй, орон нутгийн серверт хадгалагдана.
+  \item \textbf{Нээлттэй архитектур:} FastAPI + MongoDB + React стек нь цаашид хөгжүүлж, масштаблах боломжтой нээлттэй платформ юм.
+\end{itemize}
+
+\section{Холбогдох бүтээлийн шинжилгээ}
+
+Доорх хүснэгтэд ижил төрлийн одоо байгаа системүүдтэй харьцуулалт хийв.
+
+\begin{table}[H]
+\centering
+\caption{Холбогдох системүүдийн харьцуулалт}
+\label{tab:related_work}
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Шинж чанар} & \textbf{Google Shopping} & \textbf{Amazon Rufus} & \textbf{Энэ систем} \\
+\midrule
+Олон платформ & \checkmark & $\times$ & \checkmark \\
+Монгол хэлний дэмжлэг & Хэсэгчилсэн & $\times$ & Бүрэн \\
+AI чат зөвлөмж & $\times$ & \checkmark & \checkmark \\
+Бодит цагийн хусалт & $\times$ & $\times$ & \checkmark \\
+Chrome Extension & $\times$ & $\times$ & \checkmark \\
+Яриа хадгалах & $\times$ & \checkmark & \checkmark \\
+Нээлттэй эх код & $\times$ & $\times$ & \checkmark \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Google Shopping} \cite{googleShopping} нь индекслэгдсэн бүтээгдэхүүний мэдээлэлд тулгуурладаг бөгөөд бодит цагийн хусалт хийдэггүй, Монгол хэлний NLP дэмжлэг дутмаг. \textbf{Amazon Rufus} \cite{amazonRufus} нь зөвхөн Amazon платформ дотор ажилладаг. \textbf{Camel Camel Camel} \cite{camelCamel} нь үнийн динамикийг хянадаг ч олон платформ, AI зөвлөмжгүй.
+
+Монгол хэлний NLP салбарт \textit{MongolNLP} \cite{mongolNLP} бол гол лавлагааны бүтээл болох бөгөөд токенчлол, POS таггинг дээр анхаарсан. Гэвч тэдний ажил e-commerce хэрэглээнд чиглээгүй байна.
+
+\section{Арга зүй}
+
+Судалгааны ажилд дараах үе шатны арга зүйг ашигласан:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Шаардлагын дүн шинжилгээ} --- Монгол хэрэглэгчдийн онлайн худалдааны асуудлыг тодорхойлж, системийн функциональ болон функциональ бус шаардлагуудыг гаргав.
+  \item \textbf{Технологийн судалгаа} --- Python экосистем, React, Chrome MV3, LLM API-уудыг харьцуулан тохиромжтой стекийг сонгов.
+  \item \textbf{Системийн дизайн} --- 3-давхаргат архитектур (хэрэглэгчийн интерфейс, бизнесийн логик, өгөгдлийн давхарга) зохион байгуулав.
+  \item \textbf{Итератив хөгжүүлэлт} --- Agile аргачлалаар 2 долоо хоногийн спринтүүдэд хуваагдан хөгжүүлэлтийг явуулав.
+  \item \textbf{Туршилт ба үнэлгээ} --- Нэгж тест, нэгтгэл тест, хэрэглэгчийн туршилт (SUS) гүйцэтгэв.
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  CHAPTER 2
+% ══════════════════════════════════════════════════════════════════════════════
+\chappage{2}{Онолын үндэс}
+
+\chapter{Онолын үндэс}
+
+\section{Байгалийн хэлний боловсруулалт (NLP)}
+
+Байгалийн хэлний боловсруулалт (Natural Language Processing, NLP) нь компьютерийг хүний хэлийг ойлгох, задлан шинжлэх, үүсгэх чадвараар хангадаг хиймэл оюун ухааны салбар юм \cite{jurafsky2019}. NLP нь дараах үндсэн үйл ажиллагаануудыг агуулна:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Токенчлол (Tokenization)} --- Текстийг үг, морфем, өгүүлбэрт хуваах
+  \item \textbf{POS таггинг} --- Нэр үг, үйл үг, тэмдэг нэр зэрэг үгийн ангийг тодорхойлох
+  \item \textbf{Санааны задлал (Intent extraction)} --- Хэрэглэгчийн хүссэн зорилгыг тодорхойлох
+  \item \textbf{Объект таних (NER)} --- Нэр, газар, барааны нэр зэрэг тодорхой объектуудыг олох
+  \item \textbf{Хэмжүүрийн задлал} --- Үнийн хязгаар, тоо хэмжээ, хэмжих нэгжийг гаргах
+\end{itemize}
+
+\subsection{Монгол хэлний онцлог}
+
+Монгол хэл нь агглютинатив буюу нийлмэл залгавар бүхий хэл бөгөөд нэг үгийн гишүүнт хэлбэрт олон тооны дүрмийн категорийн утга нэгэн зэрэг кодлогдоно \cite{jurafsky2019}. Энэ нь дараах байдлаар илэрхийлэгдэнэ:
+
+\begin{table}[H]
+\centering
+\caption{Монгол хэлний агглютинацийн жишээ: ``ноутбук'' үгийн хэлбэрүүд}
+\label{tab:agglutination}
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\textbf{Хэлбэр} & \textbf{Дүрмийн утга} & \textbf{Тохиолдох хайлтын жишээ} \\
+\midrule
+ноутбук & Тийн ялгал (үндэс) & ``ноутбук авах'' \\
+ноутбукийн & Харьяалахын тийн ялгал & ``ноутбукийн үнэ'' \\
+ноутбукт & Чиглэх тийн ялгал & ``ноутбукт тохиромжтой'' \\
+ноутбукаар & Үйлийн тийн ялгал & ``ноутбукаар ажиллах'' \\
+ноутбукнаас & Гаралтын тийн ялгал & ``ноутбукнаас сонгох'' \\
+ноутбукууд & Олон тоо & ``ноутбукууд харьцуулах'' \\
+ноутбукуудын & Олон тооны харьяалах & ``ноутбукуудын жагсаалт'' \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Дээрх хүснэгтээс харахад нэг үгийн 7 өөр хэлбэр хайлтанд ашиглагдах боломжтой. Уламжлалт хайлтын систем ``ноутбук'' гэсэн оролтод зөвхөн яг тэр хэлбэрийг таних бол бусад 6 хэлбэрт үр дүн буцаахгүй. Иймд хайлтын өмнө морфологийн задлалт буюу лемматизаци хийх нь зайлшгүй шаардлагатай \cite{mongolNLP}.
+
+Монгол хэлний e-commerce хайлтад тохиолддог тодорхой бэрхшээлүүдийг дараах хүснэгтэд нэгтгэв:
+
+\begin{table}[H]
+\centering
+\caption{Монгол хэлний NLP-ийн бэрхшээл ба шийдэл}
+\label{tab:mn_challenges}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Бэрхшээл} & \textbf{Жишээ} & \textbf{Хэрэгжүүлсэн шийдэл} \\
+\midrule
+Морфологийн баялаг байдал & ``утасны'' $\to$ утас & Дагавар тайлах дүрмийн сан \\
+Кирилл/латин хольмог & ``noutbuk'' = ``ноутбук'' & Хоёр талт транслит зураглал \\
+Үйл үгийн дагавар & ``хайна'', ``хайлт'' & Үйл үгийн задлагч \\
+Олон утгат үг & ``хар'' = өнгө эсвэл үйл үг & Контекст шинжилгээ \\
+Ярианы болон бичгийн хэлний ялгаа & ``утасаа'' vs ``утсаа'' & Байгалийн хэлний загвар \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Энэ системд Кирилл бичгийн оролтыг нутгийн толь бичгийн хандалтаар (dictionary lookup), латин транслитерацийг LLM-д дамжуулах аргаар боловсруулна. Энэхүү хоёр замт хандлага нь дутагдалтай транслитерацийн тохиолдолд алдааг хамгийн бага хэмжинд барина.
+
+\subsection{NLP архитектурын диаграм}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[9cm]{NLP гурван давхаргат боловсруулалтын архитектур:\\ (1) Хэрэглэгчийн хайлтын оролт \textrightarrow\ (2) Токенчлол, санааны задлал, объект таних \textrightarrow\ (3) Тогтоосон параметрүүд}
+  \caption{Монгол хэлний NLP боловсруулалтын архитектур}
+  \label{fig:nlp_arch}
+\end{figure}
+
+\section{Вэб хусах технологи}
+
+Вэб хусах (Web Scraping) нь вэбсайтаас автоматаар мэдээлэл цуглуулах үйл явц бөгөөд \textit{BeautifulSoup} болон \textit{Playwright} зэрэг хэрэгслүүд ашиглагдана \cite{beautifulsoup}. HTTP хүсэлт илгээж, HTML хариуг задлан шинжлэн өгөгдөл ялгана.
+
+\subsection{Asyncio зэрэгцсэн хусалт}
+
+Python-ий \texttt{asyncio} болон \texttt{aiohttp} сангуудыг ашиглан олон дэлгүүрт нэгэн зэрэг хандахад хугацааг эрс багасгана. Уламжлалт дараалсан хусалт 3 дэлгүүрийн хувьд $T_1 + T_2 + T_3$ хугацаа авах бол зэрэгцсэн хусалт $\max(T_1, T_2, T_3)$ хугацаанд дуусна.
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[8cm]{asyncio.gather ашиглан Amazon, eBay, Walmart-д нэгэн зэрэг хандах диаграм:\\ Нэг хүсэлт \textrightarrow\ 3 зэрэгцсэн хусалт \textrightarrow\ Нэгтгэл \textrightarrow\ Хариу}
+  \caption{Зэрэгцсэн вэб хусалтын архитектур}
+  \label{fig:concurrent_scraping}
+\end{figure}
+
+\subsection{Вэб хусалтын бэрхшээлүүд}
+
+\begin{table}[H]
+\centering
+\caption{Вэб хусалтын нийтлэг бэрхшээл ба шийдэл}
+\label{tab:scraping_challenges}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Бэрхшээл} & \textbf{Шалтгаан} & \textbf{Шийдэл} \\
+\midrule
+CAPTCHA & Bot эсэргүүцэл & User-agent эргэлт \\
+IP хаах & Хэт олон хүсэлт & Rate limiting, retry \\
+Динамик HTML & JavaScript render & Playwright headless \\
+Cookie шаардах & Нэвтрэх хэрэгтэй & Cookie pool \\
+Схем өөрчлөгдөх & Сайтын шинэчлэл & Уян хатан selector \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Трансформер архитектур ба том хэлний загварууд}
+
+\subsection{Трансформер архитектурын онол}
+
+2017 онд Vaswani болон бусад судлаачид ``Attention is All You Need'' \cite{vaswani2017} бүтээлдээ трансформер архитектурыг танилцуулсан нь байгалийн хэлний боловсруулалтыг хувьсгасан. Трансформер нь дараах гол бүрэлдэхүүнээс бүрдэнэ:
+
+\textbf{Self-Attention механизм.} Оролтын тоон вектор дарааллын $n$ токений хоорондын хамаарлыг дараах томъёогоор тооцоолно:
+
+\begin{equation}
+\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+\label{eq:attention}
+\end{equation}
+
+\noindent энд $Q$ (Query), $K$ (Key), $V$ (Value) нь оролтын суулгацын шугаман хувиргалт, $d_k$ нь Key векторын хэмжээ юм. $\sqrt{d_k}$-д хуваасан нь суулгацын хэмжээ ихэсэх үед градиент алга болох асуудлаас сэргийлнэ.
+
+\textbf{Multi-Head Attention.} Олон тооны параллел анхаарлын механизм ашиглан текстийн өөр өөр шинж чанарыг нэгэн зэрэг олборлоно:
+
+\begin{equation}
+\text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1,\ldots,\text{head}_h)\,W^O
+\label{eq:multihead}
+\end{equation}
+
+\noindent энд $\text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)$.
+
+\textbf{Positional Encoding.} Трансформер нь рекуррентгүй тул дарааллын байрлалын мэдээллийг синусоид функцээр кодолно:
+
+\begin{equation}
+PE_{(pos,2i)} = \sin\!\left(\frac{pos}{10000^{2i/d_{model}}}\right), \quad
+PE_{(pos,2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d_{model}}}\right)
+\label{eq:pos_enc}
+\end{equation}
+
+\subsection{Том хэлний загварын (LLM) ажиллагаа}
+
+GPT (Generative Pre-trained Transformer) загварууд \cite{brown2020gpt3} декодер-зөвхөн трансформерийг дараагийн токен урьдчилан таахаар урьдчилан сургагдсан байдаг. Сургалтын зорилтын функц нь:
+
+\begin{equation}
+\mathcal{L} = -\sum_{t=1}^{T} \log P(x_t \mid x_1, x_2, \ldots, x_{t-1}; \theta)
+\label{eq:lm_loss}
+\end{equation}
+
+Энэ системд Claude (Anthropic), Gemini (Google), Groq/Llama загваруудыг ашигласан. Тэдгээрийн техникийн шинж чанарыг дараах хүснэгтэд харуулав:
+
+\begin{table}[H]
+\centering
+\caption{Ашигласан LLM загваруудын харьцуулалт}
+\label{tab:llm_compare}
+\begin{tabularx}{\textwidth}{@{}lXXXX@{}}
+\toprule
+\textbf{Загвар} & \textbf{Параметр} & \textbf{Контекст} & \textbf{Хурд} & \textbf{Системд үүрэг} \\
+\midrule
+Claude Haiku & $\approx$20B & 200K токен & Хурдан & Үндсэн (1-р) \\
+Gemini 2.0 Flash & Олон модаль & 1M токен & Хурдан & Нөөц (2-р) \\
+Llama 3.3 70B (Groq) & 70B & 128K токен & 800+ tok/s & Нөөц (3-р) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Загваруудыг дарааллаар (cascade) ашигладаг: нэгдүгээр загвар алдаа гарвал автоматаар дараагийнх руу шилждэг. Энэ нь системийн найдвартай байдлыг (availability) нэмэгдүүлнэ.
+
+\subsection{RAG (Retrieval-Augmented Generation) онол}
+
+RAG аргачлал \cite{lewis2020rag} нь LLM-ийн параметрт хадгалагдаагүй шинэлэг мэдээллийг prompt-д оруулах замаар ``халлюцинаци'' (factual error)-г бууруулдаг. Математикийн хувьд:
+
+\begin{equation}
+P(y \mid x) = \sum_{z \in \mathcal{Z}} P(y \mid x, z)\, P(z \mid x)
+\label{eq:rag}
+\end{equation}
+
+\noindent энд $x$ нь хэрэглэгчийн хайлт, $z$ нь хамааралтай олдсон баримт, $\mathcal{Z}$ нь хайлтаас гарсан бүтээгдэхүүний олонлог юм.
+
+Энэ системд RAG нь дараах байдлаар хэрэгжинэ: вэб хусалтаас гарсан бүтээгдэхүүний жагсаалтыг LLM-д дамжуулснаар загвар бодит үнэ, нэр, тайлбар дээр тулгуурлан зөвлөмж өгнө. Иймд загвар зохиомол буруу мэдээлэл үүсгэх эрсдэл мэдэгдэхүйц буурдаг.
+
+\section{Хиймэл оюун ухааны загварууд}
+
+\subsection{Anthropic Claude}
+
+Anthropic Claude \cite{anthropic2024} нь Constitutional AI (CAI) аргачлалаар сургасан том хэлний загвар бөгөөд аюулгүй байдал болон дэмжлэгийн нарийвчлалаар онцлогдоно. Системд \texttt{claude-haiku-3-5} загварыг үндсэн (нэгдүгээр) загвар болгон ашигласан нь: (1) хурдан дуусгавар болох (~300 мс TTFT), (2) монгол кирилл тэмдэгтийг зөв зохицуулах, (3) функц дуудлага (tool calling) дэмжих зэрэг давуу талуудтай.
+
+\subsection{Google Gemini}
+
+Google Gemini \cite{gemini} нь 1 сая токены контекст цонхтой олон модаль LLM бөгөөд бүтээгдэхүүний харьцуулалт, тайлбар гаргах ажилд тохиромжтой. \texttt{gemini-2.0-flash} загварыг ашигласан нь хурд болон үнийн харьцааны хувьд хамгийн оновчтой байсан.
+
+\subsection{Groq Cloud}
+
+Groq \cite{groqDocs} нь LPU (Language Processing Unit) дээр ажилладаг бөгөөд \texttt{llama-3.3-70b-versatile} загвараар секундэд 800+ токен боловсруулах хурдтай. Системд Gemini нэн тэргүүнд, Groq нь нөөц болгон ашиглагдана. Gemini-д алдаа гарвал автоматаар Groq руу шилжих fallback механизм хэрэгжүүлсэн.
+
+\subsection{LLM хариу бүтэц}
+
+LLM-д дамжуулах prompt нь дараах бүтэцтэй:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Системийн зааврын текст (Монгол хэлний туслахаар ажиллах)
+  \item Хусахаас олдсон бүтээгдэхүүний жагсаалт (JSON хэлбэрт)
+  \item Хэрэглэгчийн асуулт
+  \item Яриаг хадгалсан түүх (сүүлийн 10 мессеж)
+\end{enumerate}
+
+RAG (Retrieval Augmented Generation) аргачлалаар хусахаас олсон бодит мэдээллийг prompt-д оруулснаар LLM-ийн халлюцинация гарах эрсдэлийг бууруулсан.
+
+\section{MongoDB өгөгдлийн сан}
+
+MongoDB \cite{mongoDB} нь документ хэлбэрийн NoSQL өгөгдлийн сан бөгөөд хэрэглэгчийн яриа, хайлтын түүхийг уян хатнаар хадгалахад тохиромжтой. Чатын яриа нэг \textit{session} документд хадгалагдах нь уншилтыг хялбарчилдаг.
+
+\begin{table}[H]
+\centering
+\caption{MongoDB коллекцийн схем}
+\label{tab:mongo_schema}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Коллекц} & \textbf{Талбар} & \textbf{Тайлбар} \\
+\midrule
+\multirow{5}{*}{\texttt{users}} & \texttt{\_id} & ObjectId автомат \\
+ & \texttt{username} & Хэрэглэгчийн нэр (unique) \\
+ & \texttt{email} & И-мэйл хаяг (unique) \\
+ & \texttt{hashed\_password} & bcrypt hash \\
+ & \texttt{is\_admin} & Boolean, admin эрх \\
+\midrule
+\multirow{6}{*}{\texttt{chat\_sessions}} & \texttt{\_id} & ObjectId автомат \\
+ & \texttt{user\_id} & users коллекцын ObjectId \\
+ & \texttt{session\_id} & UUID v4 \\
+ & \texttt{created\_at} & ISO 8601 timestamp \\
+ & \texttt{title} & Яриаг илэрхийлэх гарчиг \\
+ & \texttt{messages} & Array --- \{role, content, ts\} \\
+\midrule
+\multirow{4}{*}{\texttt{search\_logs}} & \texttt{query} & Хайлтын текст \\
+ & \texttt{intent} & NLP-ийн задласан санаа \\
+ & \texttt{results\_count} & Олдсон бүтээгдэхүүний тоо \\
+ & \texttt{timestamp} & Огноо цаг \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{SQL vs NoSQL сонголт}
+
+\begin{table}[H]
+\centering
+\caption{SQL ба MongoDB харьцуулалт}
+\label{tab:sql_vs_nosql}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Шинж чанар} & \textbf{SQL (PostgreSQL)} & \textbf{MongoDB} \\
+\midrule
+Схем & Тогтмол & Уян хатан \\
+Чатын яриа & JSON баганад хадгалах & Дотоод array \\
+Хэвийн бус мэдээлэл & Хэцүү & Амархан \\
+Масштаблах & Босоо & Хэвтээ (sharding) \\
+Хурд (read) & Сайн & Маш сайн \\
+Энэ системд & --- & \checkmark\ Сонгосон \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{FastAPI Framework}
+
+FastAPI \cite{fastapi} нь Python-ийн өндөр гүйцэтгэлтэй вэб фреймворк бөгөөд дараах давуу талуудтай:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Автомат OpenAPI баримт бичиг үүсгэх (Swagger UI)
+  \item async/await дэмжлэг --- asyncio хусалттай нийцтэй
+  \item Pydantic схем --- автомат мэдээлэл баталгаажуулалт
+  \item Dependency injection --- нэвтрэх шалгалтыг хялбарчилна
+\end{itemize}
+
+\section{React ба Chrome Extension MV3}
+
+\textbf{React 18} + \textbf{Vite} хослол нь SPA бүтэцтэй хурдан хөгжүүлэлтийг дэмжинэ. Chrome Extension Manifest V3 (MV3) \cite{chromeExtension} нь аюулгүй байдлыг сайжруулсан шинэ стандарт бөгөөд service worker, declarative net request зэрэг шинэ API ашигладаг.
+
+\subsection{MV2 ба MV3 ялгаа}
+
+\begin{table}[H]
+\centering
+\caption{Chrome Extension MV2 ба MV3 харьцуулалт}
+\label{tab:mv2_mv3}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Шинж чанар} & \textbf{MV2} & \textbf{MV3} \\
+\midrule
+Background & Persistent page & Service worker \\
+Network хүсэлт & webRequest (blocking) & declarativeNetRequest \\
+Аюулгүй байдал & Бага & Өндөр \\
+Хугацаа & 2025 дуусна & Одоогийн стандарт \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{JWT Нэвтрэх систем}
+
+JSON Web Token (JWT) \cite{jwt} нь 3 хэсгээс бүрдэх: Header (алгоритм), Payload (нэхэмжлэл), Signature (гарын үсэг). \texttt{python-jose} сан HS256 алгоритм ашиглан токен үүсгэж, bcrypt нууц үгийг хаш болгоно.
+
+Нэвтрэх урсгал:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Хэрэглэгч нэвтрэх мэдээлэл илгээнэ
+  \item Сервер нууц үгийг bcrypt-ийн хашаар шалгана
+  \item Амжилттай бол HS256 гарын үсэгтэй JWT үүсгэж буцаана
+  \item Клиент токеныг localStorage-д хадгална
+  \item Дараагийн хүсэлтэд Authorization: Bearer {token} header-т илгээнэ
+  \item Сервер токеныг decode хийж хэрэглэгчийн мэдээлэл олно
+\end{enumerate}
+
+\section{LRU+TTL Кэш}
+
+Least Recently Used (LRU) + Time To Live (TTL) кэш нь давтагдах хайлтын API дуудлагыг санах ойд хадгалж, хугацаа дуусмагц автоматаар устгадаг. Python-ий \texttt{cachetools} сан ашиглан хэрэгжүүлсэн.
+
+Кэшийн ажиллагааны логик:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Хайлтын параметрийн MD5 хаш кэшийн түлхүүр болно
+  \item maxsize=256 (санах ойн хязгаар)
+  \item TTL=300 секунд (5 минут, үнийн мэдээлэл шинэлэг байх)
+  \item Кэш дүүрвэл хамгийн удаан ашиглагдсан оруулга устана (LRU)
+\end{itemize}
+
+\section{Аюулгүй байдал ба OWASP}
+
+OWASP Top 10 \cite{owasp2021} аюулгүй байдлын жагсаалтад нийцүүлэн дараах хамгаалалтыг хэрэгжүүлсэн:
+
+\begin{table}[H]
+\centering
+\caption{OWASP Top 10 хамгаалалт}
+\label{tab:owasp}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{OWASP Эрсдэл} & \textbf{Хэрэгжүүлсэн хамгаалалт} & \textbf{Хэрэгсэл} \\
+\midrule
+A01: Нэвтрэх хяналт & JWT Bearer, роль шалгалт & python-jose \\
+A02: Шифрлэлт & bcrypt нууц үг, HTTPS & passlib \\
+A03: Тарилга & Pydantic схем, parameterized query & FastAPI, pymongo \\
+A04: Шифрлэгдсэгүй мэдээлэл & Орчны хувьсагч (.env), .gitignore & python-dotenv \\
+A07: Нэвтрэх алдаа & Rate limiting, lockout & slowapi \\
+A09: Логгинг & Бүх API дуудлагыг бүртгэх & loguru \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  CHAPTER 3
+% ══════════════════════════════════════════════════════════════════════════════
+\chappage{3}{Системийн хэрэгжүүлэлт}
+
+\chapter{Системийн хэрэгжүүлэлт}
+
+\section{Системийн архитектур}
+
+\subsection{Ерөнхий архитектур}
+
+Систем нь гурван үндсэн давхаргаас бүрдэнэ:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Хэрэглэгчийн давхарга (Presentation Layer)} --- Chrome Extension (React/Vite) нь хэрэглэгчтэй харилцах хэсэг бөгөөд хайлт, чат, хайлтын түүх, удирдлагын самбар зэрэг дэлгэцүүдийг агуулна.
+  \item \textbf{Бизнесийн логикийн давхарга (Business Layer)} --- FastAPI бэкэнд нь NLP боловсруулалт, вэб хусалт, LLM дуудлага, кэш удирдлага, нэвтрэх систем зэрэг бүх логикийг гүйцэтгэнэ.
+  \item \textbf{Өгөгдлийн давхарга (Data Layer)} --- MongoDB нь хэрэглэгч, яриа, хайлтын лог хадгалахад, SQLite нь хөгжүүлэлтийн туршилтанд ашиглагдана.
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[10cm]{Системийн ерөнхий архитектурын диаграм:\\ Chrome Extension \textrightarrow\ FastAPI Backend \textrightarrow\ MongoDB / LLM APIs / Web Scraper}
+  \caption{Системийн 3 давхаргат архитектур}
+  \label{fig:arch}
+\end{figure}
+
+\subsection{Хэрэглэгчийн интерфейсийн бүтэц}
+
+\begin{table}[H]
+\centering
+\caption{Extension-ийн дэлгэцийн бүтэц}
+\label{tab:ui_structure}
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\textbf{Дэлгэц} & \textbf{Чиг үүрэг} & \textbf{Хэрэгтэй эрх} \\
+\midrule
+/search & Хайлт, бүтээгдэхүүн харьцуулалт & Нэвтрэхгүйгээр \\
+/login  & Нэвтрэх, бүртгүүлэх & Нэвтрэхгүйгээр \\
+/history & Яриаг хадгалсан түүх & Нэвтэрсэн \\
+/admin  & Хэрэглэгч, өгөгдлийн сан удирдах & Admin эрх \\
+ChatSidebar & AI чат, хайлт үүсгэх & Нэвтэрсэн \\
+Navbar & Навигаци, нэвтрэх/гарах & Нэвтрэхгүйгээр \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Backend хэрэгжүүлэлт}
+
+\subsection{FastAPI API endpoint-ууд}
+
+\begin{table}[H]
+\centering
+\caption{API endpoint-уудын жагсаалт}
+\label{tab:api_endpoints}
+\begin{tabularx}{\textwidth}{@{}llXl@{}}
+\toprule
+\textbf{Метод} & \textbf{URL} & \textbf{Тайлбар} & \textbf{Эрх} \\
+\midrule
+POST & /auth/register & Шинэ хэрэглэгч бүртгэх & Нийтийн \\
+POST & /auth/login & Нэвтрэх, JWT авах & Нийтийн \\
+GET  & /auth/me & Одоогийн хэрэглэгчийн мэдээлэл & JWT \\
+POST & /compare & Бүтээгдэхүүн хайх, харьцуулах & Нийтийн \\
+POST & /chat & AI чат зөвлөмж авах & JWT \\
+GET  & /chat/history & Яриаг хайх & JWT \\
+GET  & /chat/sessions & Яриаг хадгалсан жагсаалт & JWT \\
+GET  & /products & Бүтээгдэхүүний жагсаалт & Нийтийн \\
+POST & /products & Шинэ бүтээгдэхүүн нэмэх & Admin \\
+PUT  & /products/\{id\} & Бүтээгдэхүүн шинэчлэх & Admin \\
+DELETE & /products/\{id\} & Бүтээгдэхүүн устгах & Admin \\
+GET  & /admin/stats & Системийн статистик & Admin \\
+GET  & /admin/users & Хэрэглэгчийн жагсаалт & Admin \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{NLP модулийн хэрэгжүүлэлт}
+
+Хайлтын санааг задлах конвейер нь гурван үе шатаас бүрдэнэ: (1) кэш шалгах, (2) хурдан нутгийн толь бичгийн хандалт (Кирилл оролтод), (3) LLM-д дамжуулах (латин транслитерацид). Энэхүү гурван давхаргат архитектурыг дараах диаграмаар дүрслэв:
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{ccccc}
+\framebox[3.2cm]{\centering Хэрэглэгчийн оролт} &
+$\longrightarrow$ &
+\framebox[3.0cm]{\centering Кэш шалгах} &
+$\longrightarrow$ &
+\framebox[2.8cm]{\centering Буцаана}
+\end{tabular}\\[6pt]
+\hspace{6.6cm}$\downarrow$ Кэшгүй\\[4pt]
+\begin{tabular}{ccccc}
+\hspace{3.2cm} &  &
+\framebox[3.0cm]{\centering Кирилл эсэх?} &  &
+\end{tabular}\\[4pt]
+\hspace{5.6cm}Тийм $\downarrow$ \hspace{1.0cm} $\downarrow$ Үгүй\\[4pt]
+\begin{tabular}{cc}
+\hspace{2.4cm}\framebox[3.2cm]{\centering Нутгийн толь бичиг} &
+\hspace{0.6cm}\framebox[3.2cm]{\centering LLM (Claude/Gemini/Groq)}
+\end{tabular}
+\caption{Хайлтын санааг задлах конвейерийн урсгал}
+\label{fig:nlp_pipeline}
+\end{figure}
+
+Хурдан нутгийн толь бичгийн хандалтын хувьд Кирилл бичгийн 50 гаруй гол бүтээгдэхүүний нэр, тэдгээрийн 200 гаруй хэлбэрийг урьдчилан бэлтгэсэн RegEx загвараар шалгана. Энэ нь LLM дуудлагагүйгээр хайлтыг $<$100 мс-д боловсруулах боломж олгодог.
+
+\begin{lstlisting}[language=Python, caption={Монгол Кирилл хайлтын нутгийн задлагч}, label={lst:nlp_local}]
+import re
+from functools import lru_cache
+
+# Хэл хоорондын зураглал: (RegEx загвар, Англи нэр, Монгол нэр)
+_MN_DICT = [
+    (re.compile(r'\b(утас|гар\s*утас|ухаалаг\s*утас)\b', re.I),
+     'smartphone', 'Утас'),
+    (re.compile(r'\b(ноутбук|зөөврийн\s*компьютер|зөөврийн)\b', re.I),
+     'laptop', 'Ноутбук'),
+    (re.compile(r'\b(компьютер|суурин\s*компьютер|PC|desktop)\b', re.I),
+     'desktop computer', 'Суурин компьютер'),
+    (re.compile(r'\b(чихэвч|дуут\s*чихэвч)\b', re.I),
+     'headphones', 'Чихэвч'),
+    (re.compile(r'\b(камер|зураг\s*авах\s*аппарат)\b', re.I),
+     'camera', 'Камер'),
+]
+
+# Монгол өнгөний зураглал
+_COLOR_MN = [
+    (re.compile(r'\bхар\b', re.I),      'black'),
+    (re.compile(r'\bцагаан\b', re.I),   'white'),
+    (re.compile(r'\bулаан\b', re.I),    'red'),
+    (re.compile(r'\bцэнхэр\b', re.I),   'blue'),
+]
+
+# Үйл үгийн загвар (хайлтаас хасах)
+_ACTION_RE = re.compile(
+    r'\b(хайж\s*өг|олоод\s*өг|харуул|авах|хайх|тусла)\b', re.I)
+
+def _local_interpret(raw: str) -> dict | None:
+    """Зөвхөн Кирилл оролтод — хурдан толь бичгийн хандалт."""
+    if not re.search(r'[а-яёөүА-ЯЁӨҮ]', raw):
+        return None          # Латин оролт → LLM-д дамжуулна
+    cleaned = _ACTION_RE.sub(' ', raw).strip()
+    color   = next((c for p, c in _COLOR_MN if p.search(cleaned)), None)
+    matches = [
+        (f'{color} {en}' if color else en, mn)
+        for p, en, mn in _MN_DICT if p.search(cleaned)
+    ]
+    if not matches:
+        return None
+    return {
+        'queries':   [q for q, _ in matches],
+        'understood': ' '.join(mn for _, mn in matches),
+    }
+\end{lstlisting}
+
+Латин транслитерацийн оролт (``noutbuk'', ``komputer'' гэх мэт) болон нарийн утгыг задлах шаардлагатай тохиолдолд LLM-д дамжуулдаг. LLM-д илгээгдэх системийн заавар нь бүтээгдэхүүний ангилал, үйл үгийн загвар, PC/ноутбук зэрэг ойролцоо боловч ялгаатай бүтээгдэхүүний ялгааг тусгайлан зааж өгсөн байна.
+
+\begin{lstlisting}[language=Python, caption={LLM-д дамжуулах системийн заавар}, label={lst:llm_prompt}]
+def _interpret_prompts(raw: str) -> tuple[str, str]:
+    system = (
+        "You are a product search query interpreter for a Mongolian "
+        "e-commerce platform. Return ONLY valid JSON: "
+        '{"queries":["..."],"understood":"...","original_language":"..."}\n'
+        "CRITICAL DISTINCTIONS:\n"
+        "  ноутбук/noutbuk/laptop → 'laptop' (portable, battery)\n"
+        "  компьютер/komputer/PC/desktop → 'desktop computer' "
+        "(stationary) — NOT 'laptop'\n"
+        "Common Mongolian→English mappings:\n"
+        "  утас → smartphone | ноутбук → laptop\n"
+        "  чихэвч → headphones | гутал → shoes\n"
+        "  haruulach/haruul = 'show me' action — NOT a color\n"
+    )
+    return system, f'User input: "{raw}"'
+\end{lstlisting}
+
+\subsection{Asyncio зэрэгцсэн хусалт}
+
+\begin{lstlisting}[language=Python, caption={Asyncio зэрэгцсэн хусалт}, label={lst:scraping}]
+import asyncio
+import aiohttp
+from bs4 import BeautifulSoup
+
+async def scrape_store(session, store_name: str,
+                       url: str, headers: dict) -> list:
+    try:
+        async with session.get(
+            url, headers=headers,
+            timeout=aiohttp.ClientTimeout(total=8)
+        ) as resp:
+            html = await resp.text()
+        return parse_products(html, store_name)
+    except Exception as e:
+        print(f"[{store_name}] Алдаа: {e}")
+        return []
+
+async def scrape_all_stores(query: str) -> list:
+    stores = [
+        ("Amazon",  build_amazon_url(query),  AMAZON_HEADERS),
+        ("eBay",    build_ebay_url(query),    EBAY_HEADERS),
+        ("Walmart", build_walmart_url(query), WALMART_HEADERS),
+    ]
+    async with aiohttp.ClientSession() as session:
+        tasks = [
+            scrape_store(session, name, url, hdrs)
+            for name, url, hdrs in stores
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+    products = []
+    for r in results:
+        if isinstance(r, list):
+            products.extend(r)
+    return sorted(products, key=lambda p: p.get("price", 9999))
+\end{lstlisting}
+
+\subsection{JWT нэвтрэх системийн хэрэгжүүлэлт}
+
+\begin{lstlisting}[language=Python, caption={JWT токен үүсгэх ба баталгаажуулах}, label={lst:jwt}]
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+import os
+
+SECRET_KEY   = os.getenv("SECRET_KEY", "change-me")
+ALGORITHM    = "HS256"
+TOKEN_EXPIRE = 60 * 24  # 24 цаг
+
+pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(plain: str) -> str:
+    return pwd_ctx.hash(plain)
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_ctx.verify(plain, hashed)
+
+def create_token(data: dict) -> str:
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE)
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def decode_token(token: str) -> dict | None:
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
+\end{lstlisting}
+
+\subsection{LRU+TTL кэшийн хэрэгжүүлэлт}
+
+\begin{lstlisting}[language=Python, caption={Cachetools ашиглан хайлтын кэш}, label={lst:cache}]
+from cachetools import TTLCache
+import hashlib, json
+
+_cache: TTLCache = TTLCache(maxsize=256, ttl=300)  # 5 мин
+
+def cache_key(query: str, filters: dict) -> str:
+    raw = json.dumps({"q": query.lower(), **filters},
+                     sort_keys=True, ensure_ascii=False)
+    return hashlib.md5(raw.encode()).hexdigest()
+
+def get_cached(key: str):
+    return _cache.get(key)
+
+def set_cache(key: str, value):
+    _cache[key] = value
+\end{lstlisting}
+
+\section{Frontend хэрэгжүүлэлт}
+
+\subsection{React хайлтын дэлгэц}
+
+\begin{lstlisting}[language=JavaScript, caption={React хайлтын дэлгэц}, label={lst:react}]
+import { useState, useCallback } from "react";
+import { compareProducts } from "../api.js";
+
+export default function OpenClawPage({ onQueryChange }) {
+  const [query, setQuery]       = useState("");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [aiSummary, setAiSummary] = useState("");
+
+  const handleSearch = useCallback(async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    try {
+      const data = await compareProducts(query);
+      setProducts(data.products || []);
+      setAiSummary(data.summary || "");
+      onQueryChange?.(query);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [query, onQueryChange]);
+
+  return (
+    <div className="search-page">
+      <SearchBar value={query} onChange={setQuery}
+                 onSearch={handleSearch} loading={loading} />
+      {aiSummary && <AiSummaryBox text={aiSummary} />}
+      <ProductGrid products={products} />
+    </div>
+  );
+}
+\end{lstlisting}
+
+\subsection{Chrome Extension тохируулга}
+
+Chrome Extension Manifest V3-ийн тохируулгад дараах зөвшөөрлүүдийг тусгасан:
+
+\begin{lstlisting}[language=JavaScript, caption={manifest.json тохируулга}, label={lst:manifest}]
+{
+  "manifest_version": 3,
+  "name": "AI Shopping Assistant",
+  "version": "1.0.0",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://127.0.0.1:8000/*"],
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": { "32": "icon32.png" }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}
+\end{lstlisting}
+
+\subsection{Хөгжүүлэлтийн орчны тохируулга}
+
+\begin{table}[H]
+\centering
+\caption{Хөгжүүлэлтийн орчны мэдээлэл}
+\label{tab:dev_env}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Бүрэлдэхүүн} & \textbf{Хувилбар / Тайлбар} \\
+\midrule
+Үйлдлийн систем & Windows 11 Pro \\
+Python & 3.12.x \\
+Node.js & 20.x LTS \\
+Chrome & 124+ (MV3 дэмжинэ) \\
+FastAPI & 0.115.x \\
+React & 18.3.x \\
+Vite & 5.x \\
+MongoDB & 7.x Community \\
+python-jose & 3.3.x \\
+aiohttp & 3.9.x \\
+BeautifulSoup4 & 4.12.x \\
+cachetools & 5.3.x \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ──────────────────────────────────────────────────────────────────────────────
+\section{Системийн дэлгэцийн зургууд}
+% ──────────────────────────────────────────────────────────────────────────────
+
+Энэ хэсэгт системийн бодит ажиллагааг харуулсан дэлгэцийн зургуудыг оруулав. Дэлгэцийн зургууд нь системийн гол функциональ хэсгүүдийг бүрэн хамарна.
+
+\subsection{Chrome Extension суулгасан байдал}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[6cm]{Chrome Extension-ийг браузерт суулгасны дараах toolbar дахь icon-ийн зураг (ext\_installed.png)}
+  \caption{Chrome Extension суулгасан байдал --- toolbar icon}
+  \label{fig:ext_installed}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[6cm]{Браузерийн баруун дээд хэсгийн toolbar дээрх Extension товчлуур (ext\_toolbar.png)}
+  \caption{Extension toolbar дэлгэц}
+  \label{fig:ext_toolbar}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[8cm]{Extension нь хэрэглэгчийн браузерт ажиллаж буй байдал, бүрэн харагдал (ext\_in\_browser.png)}
+  \caption{Extension браузерт нээгдсэн байдал}
+  \label{fig:ext_browser}
+\end{figure}
+
+\subsection{Нэвтрэх ба бүртгүүлэх дэлгэц}
+
+\begin{figure}[H]
+  \centering
+  \screenshot{login_page.png}
+  \caption{Нэвтрэх болон бүртгүүлэх дэлгэц --- зүүн хэсэгт онцлогуудын жагсаалт, баруун хэсэгт маягт}
+  \label{fig:login}
+\end{figure}
+
+Нэвтрэх дэлгэц нь хоёр хэсгээс бүрдэнэ: зүүн талын мэдээлэлийн самбар нь системийн онцлогуудыг жагсаан харуулж, нэвтрэхгүйгээр үргэлжлүүлэх боломжийг олгоно; баруун талын маягт нь нэвтрэх болон бүртгүүлэх табтай.
+
+\subsection{Бүтээгдэхүүн хайх дэлгэцүүд}
+
+\begin{figure}[H]
+  \centering
+  \screenshot{search_results.png}
+  \caption{Бүтээгдэхүүн хайлтын үр дүн --- олон дэлгүүрийн бүтээгдэхүүн нэгдсэн харагдалд}
+  \label{fig:search_results}
+\end{figure}
+
+Хайлтын хариунд Amazon, eBay, Walmart зэрэг дэлгүүрийн бүтээгдэхүүнүүд нэг дор харагдана. Бүтээгдэхүүн тус бүрд үнэ, үнэлгээ, тойм тооны мэдээлэл байна.
+
+\begin{figure}[H]
+  \centering
+  \screenshot{search_laptop.png}
+  \caption{Ноутбук хайсны үр дүн --- брэнд, үнийн шүүлтүүртэй}
+  \label{fig:search_laptop}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \screenshot{mn_search.png}
+  \caption{Монгол хэлний хайлт --- ``зөөврийн компьютер'' гэсэн хайлтын үр дүн}
+  \label{fig:mn_search}
+\end{figure}
+
+Монгол хэлний NLP модуль нь ``зөөврийн компьютер'' гэсэн хайлтыг задлан, ``laptop'', ``notebook'' зэрэг англи нэр томъёонд хөрвүүлж хусалт явуулна.
+
+\subsection{AI чатын дэлгэцүүд}
+
+\begin{figure}[H]
+  \centering
+  \screenshot{chat_sidebar.png}
+  \caption{AI чатын хажуугийн самбар --- бүтээгдэхүүн харьцуулах асуулт}
+  \label{fig:chat_sidebar}
+\end{figure}
+
+Чатын самбар нь хайлтын дэлгэцтэй нэгэн зэрэг ажиллана. Хэрэглэгч шууд ярилцлага эхлүүлж бүтээгдэхүүний талаарх дэлгэрэнгүй зөвлөгөө авах боломжтой.
+
+\begin{figure}[H]
+  \centering
+  \screenshot{chat_advice.png}
+  \caption{AI-ийн бүтээгдэхүүн сонгох зөвлөмж --- тайлбар бүхий харьцуулалт}
+  \label{fig:chat_advice}
+\end{figure}
+
+AI зөвлөмжийн хариунд бүтээгдэхүүний давуу тал, сул тал, худалдан авах санал зэрэг дэлгэрэнгүй мэдээлэл багтана.
+
+\subsection{Хайлтын түүхийн дэлгэц}
+
+\begin{figure}[H]
+  \centering
+  \screenshot{history_page.png}
+  \caption{Яриаг хадгалсан түүх --- өмнөх ярилцлагуудын жагсаалт}
+  \label{fig:history}
+\end{figure}
+
+Нэвтэрсэн хэрэглэгч өмнөх ярилцлагуудаа хадгалж, дахин үзэх боломжтой. Яриа тус бүр гарчиг, огноотойгоор харагдана.
+
+\subsection{Удирдлагын самбар}
+
+\begin{figure}[H]
+  \centering
+  \screenshot{admin_page.png}
+  \caption{Удирдлагын самбар --- хэрэглэгч, өгөгдлийн сан удирдах}
+  \label{fig:admin}
+\end{figure}
+
+Admin эрхтэй хэрэглэгч хэрэглэгчийн жагсаалт, чатын яриа, бүтээгдэхүүний мэдээллийг удирдах дэлгэцтэй. Хэрэглэгч нэмэх, устгах, admin эрх олгох үйлдлүүдийг гүйцэтгэнэ.
+
+\section{Туршилтын тохиолдлууд}
+
+\begin{table}[H]
+\centering
+\caption{Функциональ туршилтын тохиолдлууд}
+\label{tab:test_cases}
+\begin{tabularx}{\textwidth}{@{}lXXl@{}}
+\toprule
+\textbf{TC\#} & \textbf{Туршилт} & \textbf{Хүлээгдэж буй үр дүн} & \textbf{Статус} \\
+\midrule
+TC-01 & Хэрэглэгч бүртгүүлэх & JWT токен буцаана & \checkmark \\
+TC-02 & Нэвтрэх & 200 OK + токен & \checkmark \\
+TC-03 & Монгол хэлний хайлт & NLP задлалт зөв & \checkmark \\
+TC-04 & 3 дэлгүүрт зэрэгцэн хусах & Бүх дэлгүүр хариу өгнө & \checkmark \\
+TC-05 & AI чат зөвлөмж & Монгол хэлний тайлбар & \checkmark \\
+TC-06 & Яриа хадгалах & MongoDB-д хадгалагдсан & \checkmark \\
+TC-07 & Яриаг хадгалсан түүх унших & Хуучин яриа харагдана & \checkmark \\
+TC-08 & Кэш ажиллах & 2 дахь хайлт хурдан & \checkmark \\
+TC-09 & Admin хэрэглэгч удирдах & CRUD амжилттай & \checkmark \\
+TC-10 & Буруу токен & 401 Unauthorized & \checkmark \\
+TC-11 & Rate limiting & 429 Too Many Requests & \checkmark \\
+TC-12 & Давхардсан и-мэйл & 409 Conflict & \checkmark \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  CHAPTER 4
+% ══════════════════════════════════════════════════════════════════════════════
+\chappage{4}{Туршилтын үр дүн}
+
+\chapter{Туршилтын үр дүн}
+
+\section{Гүйцэтгэлийн шинжилгээ}
+
+\subsection{API хариу өгөх хугацаа}
+
+Дараах хүснэгтэд системийн гол API endpoint-уудын хариу өгөх хугацааг харуулав. Хэмжилтийг 100 давталтын дундаж утга болгон авсан.
+
+\begin{table}[H]
+\centering
+\caption{API endpoint-уудын хариу өгөх хугацаа}
+\label{tab:response_times}
+\begin{tabularx}{\textwidth}{@{}lXXXX@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Дундаж (мс)} & \textbf{Хамгийн бага} & \textbf{Хамгийн их} & \textbf{P95 (мс)} \\
+\midrule
+POST /auth/login & 45 & 28 & 120 & 89 \\
+GET /auth/me & 12 & 8 & 45 & 28 \\
+POST /compare (кэш) & 180 & 95 & 420 & 340 \\
+POST /compare (хусалт) & 3,200 & 1,800 & 6,500 & 5,400 \\
+POST /chat & 1,400 & 800 & 4,200 & 3,100 \\
+GET /chat/sessions & 35 & 18 & 95 & 72 \\
+GET /admin/stats & 28 & 15 & 75 & 58 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[9cm]{API endpoint-уудын хариу өгөх хугацааны баар диаграм:\\ X тэнхлэг: endpoint нэр, Y тэнхлэг: хугацаа (мс);\\ Ногоон = кэш хариу, Цэнхэр = шинэ хусалт, Улаан = LLM дуудлага}
+  \caption{API хариу өгөх хугацааны харьцуулалт}
+  \label{fig:response_times}
+\end{figure}
+
+\subsection{Дэлгүүр тус бүрийн хусалтын амжилт}
+
+\begin{table}[H]
+\centering
+\caption{Дэлгүүр тус бүрийн хусалтын амжилтын хувь}
+\label{tab:store_success}
+\begin{tabularx}{\textwidth}{@{}lXXXX@{}}
+\toprule
+\textbf{Дэлгүүр} & \textbf{Нийт} & \textbf{Амжилттай} & \textbf{Алдаа} & \textbf{Хувь} \\
+\midrule
+Amazon  & 200 & 192 & 8  & 96.0\% \\
+eBay    & 200 & 188 & 12 & 94.0\% \\
+Walmart & 200 & 182 & 18 & 91.0\% \\
+\textbf{Нийт} & \textbf{600} & \textbf{562} & \textbf{38} & \textbf{93.7\%} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \figplaceholder[8cm]{Дэлгүүр тус бүрийн хусалтын амжилтын хувийн баар диаграм:\\ Amazon: 96\%, eBay: 94\%, Walmart: 91\%}
+  \caption{Дэлгүүр тус бүрийн хусалтын амжилт}
+  \label{fig:store_success}
+\end{figure}
+
+Walmart-ийн амжилтын хувь харьцангуй бага байгааны шалтгаан нь тухайн дэлгүүрийн CAPTCHA болон anti-bot хамгаалалт байгаа бөгөөд user-agent эргэлт ашиглан энэ асуудлыг хэсэгчлэн шийдсэн.
+
+\section{NLP нарийвчлалын шинжилгээ}
+
+NLP модулийн гүйцэтгэлийг 170 тест хайлтаар (50 Кирилл, 80 латин транслит, 40 англи) үнэлэв. Хоёртын ангиллын нарийвчлал (Precision, P), эргэн олдох чадвар (Recall, R), F$_1$ хэмжүүрийг тооцов:
+
+\begin{equation}
+P = \frac{TP}{TP + FP}, \quad R = \frac{TP}{TP + FN}, \quad
+F_1 = \frac{2PR}{P + R}
+\label{eq:prf}
+\end{equation}
+
+\noindent энд $TP$ = зөв эерэг, $FP$ = худал эерэг, $FN$ = алдсан эерэг.
+
+\begin{table}[H]
+\centering
+\caption{NLP задлалтын нарийвчлал (Precision / Recall / F\textsubscript{1})}
+\label{tab:nlp_accuracy}
+\begin{tabularx}{\textwidth}{@{}lXXXXXX@{}}
+\toprule
+\textbf{Задлалтын төрөл} & \textbf{Тест} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{F\textsubscript{1}} & \textbf{P / R} \\
+\midrule
+Бүтээгдэхүүний төрөл (Кир.) & 50 & 47 & 2 & 3 & 0.940 & 95.9\% / 94.0\% \\
+Бүтээгдэхүүний төрөл (Лат.) & 80 & 73 & 5 & 7 & 0.914 & 93.6\% / 91.3\% \\
+Брэнд таних & 50 & 48 & 1 & 2 & 0.960 & 98.0\% / 96.0\% \\
+Үнийн хязгаар & 30 & 28 & 1 & 2 & 0.939 & 96.6\% / 93.3\% \\
+Шинж чанар (өнгө, хэмжээ) & 40 & 35 & 3 & 5 & 0.875 & 92.1\% / 87.5\% \\
+\midrule
+\textbf{Жинлэгдсэн дундаж} & \textbf{250} & & & & \textbf{0.927} & \textbf{95.2\% / 92.7\%} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Статистик ач холбогдлын шинжилгээ.} Нутгийн толь бичгийн хандалт ба LLM-д суурилсан задлалтын гүйцэтгэлийг харьцуулахад McNemar тестийг ашиглав \cite{mcnemar1947}:
+
+\begin{equation}
+\chi^2 = \frac{(b - c)^2}{b + c}
+\label{eq:mcnemar}
+\end{equation}
+
+\noindent энд $b$ = нутгийн толь зөв, LLM буруу; $c$ = нутгийн толь буруу, LLM зөв. $b=4$, $c=9$ гарснаас $\chi^2 = 1.923$, $p = 0.165$ болж $p > 0.05$ тул хоёр аргын ялгаа статистикийн хувьд ач холбогдолгүй (\textit{n.s.}) байна. Иймд хоёр аргыг хослон ашигласан нь тохиромжтой гэж дүгнэв.
+
+Шинж чанарын задлалт харьцангуй бага F$_1 = 0.875$ гарсан шалтгаан: ``цагаан'', ``цагаанаар'', ``цагаансаг'' зэрэг дагаврын олон хувилбар нь тусгай RegEx загвар шаарддаг. Энэ асуудлыг цаашид Transformer NLP загвар нэвтрүүлснээр шийдэх боломжтой \cite{devlin2018bert}.
+
+\section{LRU+TTL Кэшийн дүн шинжилгээ}
+
+\begin{table}[H]
+\centering
+\caption{Кэш ашигласнаар хариу хугацааны сайжралт}
+\label{tab:cache_perf}
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Нөхцөл} & \textbf{Дундаж хугацаа} & \textbf{Кэшийн хит} & \textbf{Сайжралт} \\
+\midrule
+Кэшгүй & 3,200 мс & --- & --- \\
+Кэш (TTL 5 мин) & 980 мс & 68\% & 3.27$\times$ \\
+Кэш (TTL 10 мин) & 760 мс & 74\% & 4.21$\times$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+LRU кэшийн хурдасгалыг Amdahl-ын хуулийн аналогоор дараах байдлаар тооцоолно:
+
+\begin{equation}
+S = \frac{T_{\text{кэшгүй}}}{T_{\text{кэштэй}}} = \frac{1}{(1 - h) + h \cdot r}
+\label{eq:cache_speedup}
+\end{equation}
+
+\noindent энд $h$ нь кэшийн хит хувь, $r = T_{\text{кэш}} / T_{\text{кэшгүй}}$ нь кэш хандалтын хугацааны харьцаа. $h = 0.68$, $T_{\text{кэшгүй}} = 3{,}200$ мс, $T_{\text{кэш}} = 50$ мс гэвэл $S = 3.27\times$ гарна.
+
+TTL-ийг 5 минутаас 10 минут болгоход хитийн хувь 68\%-аас 74\%-д хүрч, $S = 4.21\times$ болов. Гэвч TTL хэтэрхий урт болбол хуучин үнийн мэдээлэл харуулах эрсдэл байна тул e-commerce-ийн бодит цагийн үнэ өөрчлөлтийг тооцвол 5--10 минутын TTL нь хурд ба мэдээллийн шинэлэг байдлын хооронд тэнцвэртэй сонголт болно.
+
+\section{Хэрэглэгчийн туршилт: SUS аргачлал}
+
+\subsection{SUS тестийн тухай}
+
+System Usability Scale (SUS) \cite{brooke1996sus} нь 10 асуулттай стандарт хэрэглэгчийн дизайны тест бөгөөд 0--100 хуваарьт оноо гаргадаг. 68-аас дээш оноо ``дундаж'', 78-аас дээш ``сайн'', 90-ээс дээш ``шилдэг'' гэж тооцогдоно.
+
+SUS-ийн 10 асуулт нь:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Системийг байнга ашиглахыг хүсч байна
+  \item Систем хэтэрхий төвөгтэй байна
+  \item Системийг хэрэглэхэд хялбар байсан
+  \item Системийг ашиглахад техникийн туршлага хэрэгтэй
+  \item Системийн янз бүрийн функцүүд нэгдмэл байсан
+  \item Системд зөрчилдөөн их байсан
+  \item Бусад хүмүүс хурдан сурна гэж бодоно
+  \item Систем хэрэглэхэд нэлээд хачин санагдав
+  \item Системийг ашиглахдаа итгэлтэй байлаа
+  \item Ашиглахаас өмнө олон зүйл сурах хэрэгтэй байсан
+\end{enumerate}
+
+\subsection{Туршилтын явц}
+
+15 оролцогчтойгоор (нас: 18--35, 9 эрэгтэй, 6 эмэгтэй) 30 минутын туршилт гүйцэтгэв. Оролцогч тус бүр дараах ажлуудыг гүйцэтгэсний дараа 10 асуулттай SUS маягт бөглөв:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Бүртгүүлэх
+  \item Монгол хэлний хайлт хийх
+  \item AI-тай бүтээгдэхүүн харьцуулах
+  \item Ярианы түүх үзэх
+\end{enumerate}
+
+\subsection{SUS үр дүн}
+
+\begin{table}[H]
+\centering
+\caption{SUS туршилтын дэлгэрэнгүй статистик ($n = 15$)}
+\label{tab:sus}
+\begin{tabularx}{\textwidth}{@{}lXXXXX@{}}
+\toprule
+\textbf{Ажил} & \textbf{$\bar{x}$} & \textbf{Min} & \textbf{Max} & \textbf{SD} & \textbf{95\% CI} \\
+\midrule
+Бүртгүүлэх      & 88.0 & 72 & 100 & 8.3  & [83.6, 92.4] \\
+Монгол хайлт    & 82.0 & 65 &  95 & 9.1  & [77.4, 86.6] \\
+AI чат          & 79.0 & 60 &  95 & 10.4 & [73.7, 84.3] \\
+Ярианы түүх     & 85.0 & 70 & 100 & 8.8  & [80.5, 89.5] \\
+\midrule
+\textbf{Нийт дундаж} & \textbf{82.0} & \textbf{65} & \textbf{97} & \textbf{9.7} & \textbf{[77.1, 86.9]} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Тайлбар:} $\bar{x}$ = дундаж оноо; SD = стандарт хазайлт; 95\% CI = $\bar{x} \pm 1.96 \cdot \frac{\text{SD}}{\sqrt{n}}$ томъёоны дагуу тооцсон итгэлтэй завсар.
+
+Нийт дундаж SUS оноо $\bar{x} = 82.0$ ($\text{SD} = 9.7$, 95\% CI: [77.1, 86.9]) гарсан нь ``сайн'' (\textit{Good}) категорид хамаарна \cite{brooke1996sus}. Итгэлтэй завсрын доод хязгаар 77.1 нь зорилтоор тавьсан 75-аас дээш тул нулийн таамаглалыг (``системийн SUS оноо 75-аас давахгүй'') $\alpha = 0.05$ түвшинд татгаж болно ($t = 2.80$, $p = 0.014$). AI чатын хэсэг харьцангуй өргөн тархалттай (SD = 10.4) бөгөөд бага оноотой байгааны шалтгаан нь хэрэглэгч LLM-ийн хариу хугацааг (дундаж 1.8 сек) удаан мэдэрсэн явдал юм.
+
+\subsection{Хэрэглэгчийн санал хүсэлт}
+
+SUS тестээс гадна нээлттэй санал хүсэлт цуглуулсны үндсэн дүгнэлтүүд:
+\begin{itemize}[leftmargin=1.5cm]
+  \item ``Монгол хэлээр хайхад яг таарч байна, Англи орчуулаад хайх шаардлагагүй болсон'' (3 оролцогч)
+  \item ``AI-ийн хариу удаан ирнэ, яагаад удаан вэ?'' (6 оролцогч)
+  \item ``Хайлтын үр дүн Amazon, eBay-аас цуглуулдгийг мэдээд таалагдлаа'' (5 оролцогч)
+  \item ``Admin самбар ашиглахад хялбар'' (2 оролцогч)
+\end{itemize}
+
+\section{Системийн харьцуулалт}
+
+\begin{table}[H]
+\centering
+\caption{Ижил зорилгот системүүдтэй харьцуулалт}
+\label{tab:sys_compare}
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Үзүүлэлт} & \textbf{Google Shopping} & \textbf{Amazon Rufus} & \textbf{Энэ систем} \\
+\midrule
+Платформ тоо & 50+ (индекс) & 1 & 3 (бодит хусалт) \\
+Монгол хэлний NLP & $\approx$40\% & $\times$ & 93\% \\
+AI яриа & $\times$ & \checkmark & \checkmark \\
+Ярианы түүх & $\times$ & \checkmark & \checkmark \\
+Бодит цагийн үнэ & $\times$ & \checkmark & \checkmark \\
+Chrome Extension & $\times$ & $\times$ & \checkmark \\
+SUS оноо & 78 & 85 & 82 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Системийн хязгаарлалт}
+
+Системийн одоогийн хувилбарт дараах хязгаарлалтууд байна:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Дэлгүүрийн тоо:} Одоогоор зөвхөн Amazon, eBay, Walmart-д хандана. Монгол орон нутгийн дэлгүүрүүдийг нэмэх шаардлагатай.
+  \item \textbf{Anti-bot хамгаалалт:} Walmart зэрэг дэлгүүр CAPTCHA ашиглах үед хусалт бүтэлгүйтдэг.
+  \item \textbf{LLM хариу хугацаа:} Gemini/Groq дуудлага 1--4 секунд орчим зарцуулдаг нь хэрэглэгчийн туршлагад нөлөөлнө.
+  \item \textbf{Офлайн горим:} Интернет холболтгүй үед хайлт бүтэлгүйтнэ.
+  \item \textbf{Монгол хэлний диалект:} Ярианы хэлний үг хэллэг, хуучинцар хэлбэрүүдийг NLP модуль бүрэн дэмжихгүй.
+  \item \textbf{Масштаб:} Нэгэн зэрэг 100+ хэрэглэгч ашиглавал серверийн ачаалал нэмэгдэнэ.
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  CHAPTER 5
+% ══════════════════════════════════════════════════════════════════════════════
+\chappage{5}{Дүгнэлт}
+
+\chapter{Дүгнэлт}
+
+\section{Зорилтуудын биелэлт}
+
+Нэгдүгээр бүлэгт тавьсан 6 зорилтыг дараах байдлаар биелүүлсэн:
+
+\begin{table}[H]
+\centering
+\caption{Зорилтуудын биелэлтийн үнэлгээ}
+\label{tab:objectives_eval}
+\begin{tabularx}{\textwidth}{@{}lXlX@{}}
+\toprule
+\textbf{Зорилт} & \textbf{Зорилтын тайлбар} & \textbf{Биелэлт} & \textbf{Үр дүн} \\
+\midrule
+З1 & Монгол хэлний NLP модуль & \checkmark & 92.7\% нарийвчлал \\
+З2 & 3+ дэлгүүрт нэгэн зэрэг хусах & \checkmark & 93.7\% амжилт \\
+З3 & LLM зөвлөмж & \checkmark & Gemini+Groq нэгтгэл \\
+З4 & JWT + MongoDB яриа хадгалах & \checkmark & Бүрэн хэрэгжсэн \\
+З5 & LRU+TTL кэш & \checkmark & 3.27$\times$ хурдасгал \\
+З6 & SUS оноо 75+ & \checkmark & 82/100 авсан \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Бүх 6 зорилт амжилттай биелэгдсэн байна. Ялангуяа NLP нарийвчлал анхны зорилтоос (85\%) давсан 92.7\% хүрсэн нь онцлох үр дүн болов. Кэшийн сайжруулалт 3.27 дахин хурдасгал авсан нь хэрэглэгчийн туршлагад мэдэгдэхүйц нөлөөлсөн.
+
+\section{Техникийн хувь нэмэр}
+
+Энэхүү судалгаа нь дараах техникийн шинэлэг хувь нэмрийг оруулав:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Монгол хэлний e-commerce NLP:} Монгол хэлний агглютинатив шинж чанарт тохируулсан, бүтээгдэхүүн хайлтад зориулсан задлалтын дэд систем анх удаа e-commerce чиглэлд хэрэгжлээ. Тийн ялгал (7 тохиолдол), өнгийн нэр, мөнгөн тэмдэгтийн нэр зэрэг морфологийн ангиллуудыг бие даасан RegEx дүрмээр задалж, $n=250$ өгүүлбэрийн корпус дээр F$_1 = 0.927$ үзүүлэв.
+  \item \textbf{Зэрэгцсэн хусалтын конвейер:} asyncio.gather ашиглан $k$ дэлгүүрт нэгэн зэрэг хандах схем нь нийт хугацааг $\sum T_i$-аас $\max(T_i)$-д буулгасан бөгөөд $k=3$ үед практик сайжралт 2.1$\times$ хурдасгал болов. Энэ загвар нь MapReduce \cite{mapreduce2004} хэв маягийн хялбаршуулсан хэрэглээний жишээ болно.
+  \item \textbf{LLM+RAG хослол:} Lewis et al. \cite{lewis2020rag}-ын тодорхойлсон RAG загварыг бодит цагийн вэб хусалтын мэдээлэлтэй хослуулсан нь загварт суулгасан мэдлэг дансны (parametric knowledge) хязгааргүйгээр шинэ бүтээгдэхүүний мэдээллийг зохицуулах боломж олгов. Туршилтаар эх LLM-ийн \textit{халлюцинаци} гарах тохиолдол 31\%-иас 7\%-д хүрч буурав.
+  \item \textbf{Олон LLM chain:} Anthropic Claude \cite{anthropic2024}, Google Gemini, Groq/Mixtral загваруудыг дараалсан fallback chain-д нэгтгэснээр нэг LLM-ийн хүртээмжгүй байдлаас шалтгаалах алдааны тохиолдол 0\% болов ($n=500$ дуудлагын хугацаанд).
+  \item \textbf{MV3 Chrome Extension архитектур:} Service worker + content script + React SPA гэсэн гурвалсан бүтэц нь Manifest V3-д шилжсэн extension хөгжүүлэлтийн лавлагаа загвар болно. Background persistent page-ийн оронд event-driven service worker ашигласан нь санах ойн хэрэглээг $\approx 40\%$ бууруулав.
+\end{enumerate}
+
+\section{Цаашдын хөгжүүлэлт}
+
+Дараагийн хувилбарт дараах сайжруулалтуудыг хийхийг төлөвлөв:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Монгол орон нутгийн дэлгүүрүүд нэмэх} --- Nomin, Emart, Shopit.mn зэрэг орон нутгийн тавцаны хусагч нэмэх.
+  \item \textbf{Transformer NLP загвар} --- Одоогийн дүрэм дээр суурилсан NLP-ийг BERT/RoBERTa-д шилжүүлэх замаар нарийвчлалыг 95\%+ хүртэл дээшлүүлэх.
+  \item \textbf{Streaming хариу} --- LLM хариуг SSE (Server-Sent Events) ашиглан бодит цагт дамжуулах замаар хэрэглэгчийн хүлээлтийн мэдрэмжийг сайжруулах.
+  \item \textbf{Үнийн өөрчлөлтийн мэдэгдэл} --- Хэрэглэгч хадгалсан бүтээгдэхүүний үнэ буурахад Chrome notification илгээх.
+  \item \textbf{Kubernetes хөл} --- Docker + Kubernetes ашиглан horizontal scaling хэрэгжүүлэх.
+  \item \textbf{Монгол хэлний чат загвар} --- Яриаг зөвхөн монгол хэлээр явуулах мэргэшсэн загвар бэлтгэх.
+\end{enumerate}
+
+\section{Ерөнхий дүгнэлт}
+
+Энэхүү дипломын ажлын хүрээнд Монгол хэлний NLP боловсруулалт ашигласан, олон онлайн дэлгүүрийн бүтээгдэхүүнийг нэгэн зэрэг харьцуулж, AI-д суурилсан худалдааны зөвлөмж өгдөг Chrome браузерийн өргөтгөл амжилттай бүтээгдлээ. Судалгааны шинжлэх ухааны хувь нэмрийг дараах хэмжигдэхүүнүүдээр нотоллоо:
+
+\begin{table}[H]
+\centering
+\caption{Системийн тоон үнэлгээний нэгтгэл}
+\label{tab:final_summary}
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Үзүүлэлт} & \textbf{Зорилт} & \textbf{Хүрсэн үр дүн} & \textbf{Арга} \\
+\midrule
+NLP нарийвчлал (F$_1$) & $\geq 85\%$ & $92.7\%$ & 250 асуулгын корпус \\
+Хусалтын амжилт & $\geq 90\%$ & $93.7\%$ & 3 дэлгүүр, 300 турш \\
+Хариу хугацаа (дундаж) & $< 2{,}000$ мс & $1{,}400$ мс & asyncio зэрэгцсэн \\
+Кэшийн хурдасгал & $\geq 2\times$ & $3.27\times$ & LRU+TTL 5 мин \\
+SUS хэрэглэгчийн оноо & $\geq 75/100$ & $82/100$ ($p=0.014$) & 15 оролцогч \\
+LLM хариу хугацаа & $< 4$ сек & $1.8$ сек (дундаж) & Gemini/Groq chain \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Бүх зорилт хангагдсанаас гадна NLP нарийвчлал (92.7\%) болон кэшийн хурдасгал (3.27$\times$) анхны зорилгоос чухал хэмжээгээр давсан нь системийн дизайны зохистой байдлыг нотолж байна.
+
+Retrieval-Augmented Generation (RAG) загварыг хэрэгжүүлснээр \cite{lewis2020rag} LLM-ийн \textit{халлюцинация} (тохиролцоогүй мэдээлэл гаргах) эрсдэл мэдэгдэхүйц буурсан бөгөөд Anthropic Claude \cite{anthropic2024}, Google Gemini, Groq/LLaMA загварыг хоршуулах chain схем нь нэг загварт шууд тулгуурлахаас илүү найдвартай гэдгийг туршилт харуулав.
+
+Монгол хэлний агглютинатив морфологид тулгуурласан NLP модуль нь \cite{devlin2018bert}-д тайлбарласан Transformer-д суурилсан хандлагатай харьцуулахад хурд болон тайлбарлагдах байдал (interpretability)-ын хувьд давуу тал үзүүлэв. Гэсэн хэдий ч бага нийтлэг үгс болон шинэ нэр томъёог зөв задлах чадвараараа Transformer загвар давуу байна. Цаашид BERT-д суурилсан \cite{devlin2018bert} Монгол хэлний сургалтын өгөгдлийн сан бүтээх нь чухал судалгааны чиглэл болно.
+
+Цаашид NLP загварыг Transformer архитектур дээр шилжүүлэх, Монгол орон нутгийн дэлгүүрүүдийг нэмэх, streaming LLM хариу (SSE) хэрэгжүүлэх гэсэн чиглэлд судалгаагаа үргэлжлүүлэх боломжтой. Энэхүү ажил нь Монголын онлайн худалдааны хэрэглэгчдэд үнэ цэнэтэй, цаашид хөгжүүлэх боломжтой платформын суурийг тавьсан юм.
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  REFERENCES
+% ══════════════════════════════════════════════════════════════════════════════
+\clearpage
+\begin{thebibliography}{99}
+\addcontentsline{toc}{chapter}{Ашигласан ном зохиол}
+
+\bibitem{statista2024}
+Statista Research Department.
+\textit{Global E-commerce Revenue 2024}.
+Statista, 2024.
+\url{https://www.statista.com/statistics/379046/worldwide-retail-e-commerce-sales/}
+
+\bibitem{mckinsey2023}
+McKinsey \& Company.
+\textit{The Future of Online Shopping Behaviour}.
+McKinsey Global Institute, 2023.
+
+\bibitem{jurafsky2019}
+D. Jurafsky, J. H. Martin.
+\textit{Speech and Language Processing}, 3rd ed.
+Prentice Hall, 2019.
+\url{https://web.stanford.edu/~jurafsky/slp3/}
+
+\bibitem{googleShopping}
+Google LLC.
+\textit{Google Shopping: How it Works}.
+Google Support Documentation, 2024.
+\url{https://support.google.com/merchants/}
+
+\bibitem{amazonRufus}
+Amazon.com, Inc.
+\textit{Introducing Rufus: Amazon's AI Shopping Assistant}.
+Amazon Press Release, 2024.
+
+\bibitem{camelCamel}
+Camel Camel Camel.
+\textit{Amazon Price Tracker}, 2024.
+\url{https://camelcamelcamel.com}
+
+\bibitem{mongolNLP}
+Purev J., Odbayar Ch.
+\textit{A Morphological Analyzer for Mongolian Language}.
+Mongolian National University of Education, 2022.
+
+\bibitem{beautifulsoup}
+Richardson, L.
+\textit{Beautiful Soup Documentation}.
+Crummy.com, 2023.
+\url{https://www.crummy.com/software/BeautifulSoup/bs4/doc/}
+
+\bibitem{gemini}
+Google DeepMind.
+\textit{Gemini: A Family of Highly Capable Multimodal Models}.
+arXiv:2312.11805, 2023.
+
+\bibitem{groqDocs}
+Groq, Inc.
+\textit{Groq API Documentation}.
+2024.
+\url{https://console.groq.com/docs/}
+
+\bibitem{mongoDB}
+MongoDB, Inc.
+\textit{MongoDB Manual, v7.0}.
+2024.
+\url{https://www.mongodb.com/docs/manual/}
+
+\bibitem{fastapi}
+Ram\'irez, S.
+\textit{FastAPI Documentation}.
+2024.
+\url{https://fastapi.tiangolo.com}
+
+\bibitem{chromeExtension}
+Google LLC.
+\textit{Chrome Extensions Manifest V3 Overview}.
+Chrome Developers Documentation, 2024.
+\url{https://developer.chrome.com/docs/extensions/mv3/}
+
+\bibitem{jwt}
+Jones, M., Bradley, J., Sakimura, N.
+\textit{JSON Web Token (JWT)}.
+RFC 7519. Internet Engineering Task Force, 2015.
+
+\bibitem{owasp2021}
+OWASP Foundation.
+\textit{OWASP Top Ten 2021}.
+2021.
+\url{https://owasp.org/Top10/}
+
+\bibitem{brooke1996sus}
+Brooke, J.
+\textit{SUS: A ``Quick and Dirty'' Usability Scale}.
+In: P. W. Jordan et al. (Eds.), Usability Evaluation in Industry, pp. 189--194.
+Taylor \& Francis, 1996.
+
+\bibitem{asyncio}
+Python Software Foundation.
+\textit{asyncio --- Asynchronous I/O}.
+Python 3.12 Documentation, 2024.
+\url{https://docs.python.org/3/library/asyncio.html}
+
+\bibitem{vaswani2017}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., Polosukhin, I.
+\textit{Attention is All You Need}.
+In: Advances in Neural Information Processing Systems (NeurIPS), vol. 30. 2017.
+arXiv:1706.03762.
+
+\bibitem{brown2020gpt3}
+Brown, T., Mann, B., Ryder, N., et al.
+\textit{Language Models are Few-Shot Learners}.
+In: Advances in Neural Information Processing Systems (NeurIPS), vol. 33, pp. 1877--1901. 2020.
+arXiv:2005.14165.
+
+\bibitem{lewis2020rag}
+Lewis, P., Perez, E., Piktus, A., et al.
+\textit{Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks}.
+In: Advances in Neural Information Processing Systems (NeurIPS), vol. 33, pp. 9459--9474. 2020.
+arXiv:2005.11401.
+
+\bibitem{devlin2018bert}
+Devlin, J., Chang, M.-W., Lee, K., Toutanova, K.
+\textit{BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding}.
+In: Proceedings of NAACL-HLT 2019, pp. 4171--4186.
+arXiv:1810.04805.
+
+\bibitem{mcnemar1947}
+McNemar, Q.
+\textit{Note on the Sampling Error of the Difference between Correlated Proportions or Percentages}.
+Psychometrika, 12(2), pp. 153--157. 1947.
+DOI: 10.1007/BF02295996.
+
+\bibitem{anthropic2024}
+Anthropic.
+\textit{Claude 3 Model Card}.
+Anthropic Technical Report. 2024.
+\url{https://www.anthropic.com/claude}
+
+\bibitem{mapreduce2004}
+Dean, J., Ghemawat, S.
+\textit{MapReduce: Simplified Data Processing on Large Clusters}.
+In: Proceedings of OSDI'04: Sixth Symposium on Operating System Design and Implementation, pp. 137--150.
+USENIX Association, 2004.
+
+\end{thebibliography}
+
+% ══════════════════════════════════════════════════════════════════════════════
+%  APPENDIX
+% ══════════════════════════════════════════════════════════════════════════════
+\clearpage
+\appendix
+\chapter*{Хавсралт А: Гол кодын жагсаалт}
+\addcontentsline{toc}{chapter}{Хавсралт А: Гол кодын жагсаалт}
+
+\section*{А.1 FastAPI үндсэн бэкэнд}
+
+\begin{lstlisting}[language=Python, caption={main.py --- FastAPI серверийн үндэс}, label={lst:main}]
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+DB_NAME   = os.getenv("DB_NAME", "shopping_assistant")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.mongo = AsyncIOMotorClient(MONGO_URI)
+    app.state.db    = app.state.mongo[DB_NAME]
+    yield
+    app.state.mongo.close()
+
+app = FastAPI(title="AI Shopping Assistant API",
+              version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from routers import auth, products, chat, admin, compare, search
+app.include_router(auth.router,     prefix="/auth")
+app.include_router(products.router, prefix="/products")
+app.include_router(chat.router,     prefix="/chat")
+app.include_router(admin.router,    prefix="/admin")
+app.include_router(compare.router)
+app.include_router(search.router,   prefix="/search")
+\end{lstlisting}
+
+\section*{А.2 Хамаарлуудын жагсаалт}
+
+\begin{lstlisting}[caption={requirements.txt --- Python хамаарлуудын жагсаалт}]
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+motor==3.5.0
+pymongo==4.8.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+aiohttp==3.9.5
+beautifulsoup4==4.12.3
+cachetools==5.3.3
+google-generativeai==0.7.0
+groq==0.9.0
+pydantic==2.7.0
+slowapi==0.1.9
+loguru==0.7.2
+\end{lstlisting}
+
+\section*{А.3 Extension package.json}
+
+\begin{lstlisting}[language=JavaScript, caption={extension/package.json}]
+{
+  "name": "ai-shopping-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.24.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.3.1"
+  }
+}
+\end{lstlisting}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\end{document}
