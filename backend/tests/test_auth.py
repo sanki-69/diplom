@@ -2,6 +2,12 @@ import main
 from conftest import auth, register
 
 
+def test_root_landing(client):
+    r = client.get("/")
+    assert r.status_code == 200
+    assert r.json()["health"] == "/health"
+
+
 def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200

@@ -3248,6 +3248,12 @@ async def proxy_image(url: str, _rl=Depends(rate_limit("image"))):
                                     "X-Content-Type-Options": "nosniff"})
 
 
+@app.get("/")
+def root():
+    """Landing response for anyone opening the bare API address."""
+    return {"name": "AI Shop API", "status": "ok", "health": "/health", "docs": "/docs"}
+
+
 @app.get("/health")
 def health():
     mongo_error = MONGO_CONFIG_ERROR
