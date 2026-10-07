@@ -94,10 +94,20 @@ SCRAPER_PROXY = (os.getenv("SCRAPER_PROXY_URL") or "").strip() or None
 # ─────────────────────────────────────────
 # Local MongoDB answers in milliseconds; a short timeout keeps requests fast
 # (instead of hanging 5s per DB call) when the database is down.
-mongo_client = MongoClient(
-    MONGO_URL,
-    serverSelectionTimeoutMS=10000 if MONGO_URL.startswith("mongodb+srv") else 2000,  # cloud Atlas needs longer
-)
+MONGO_CONFIG_ERROR = None
+try:
+    mongo_client = MongoClient(
+        MONGO_URL,
+        serverSelectionTimeoutMS=10000 if MONGO_URL.startswith("mongodb+srv") else 2000,  # cloud Atlas needs longer
+    )
+except Exception as _e:
+    # A malformed MONGODB_URL (wrong prefix, typo in the Atlas host, leftover
+    # <brackets>) would otherwise crash the whole server at startup. Start
+    # anyway so chat/search work and /health shows what is wrong.
+    MONGO_CONFIG_ERROR = f"{type(_e).__name__}: {str(_e)[:200]}"
+    print(f"[mongo] MONGODB_URL is invalid — {MONGO_CONFIG_ERROR}. "
+          "Fix MONGODB_URL (it must start with mongodb:// or mongodb+srv://).")
+    mongo_client = MongoClient("mongodb://127.0.0.1:1", serverSelectionTimeoutMS=500, connect=False)
 mdb          = mongo_client[MONGO_DB_NAME]
 
 # Collections
@@ -119,9 +129,12 @@ def _safe_create_indexes(col, specs: list):
             col.create_index(keys, **kwargs)
     except Exception as e:
         _mongo_down_at_startup = True
-        print(f"[mongo] MongoDB not reachable at {MONGO_URL} ({e.__class__.__name__}). "
-              "Starting anyway: chat and price search work, login/history/admin don't. "
-              "Start it with:  net start MongoDB  (admin), then restart the backend.")
+        safe_url = re.sub(r"//([^:/@]+):[^@]*@", r"//\1:****@", MONGO_URL)   # never log the password
+        hint = ("Check MONGODB_URL, the Atlas password and Atlas Network Access."
+                if "+srv" in MONGO_URL or "mongodb.net" in MONGO_URL
+                else "Start it with:  net start MongoDB  (admin), then restart the backend.")
+        print(f"[mongo] MongoDB not reachable at {safe_url} ({e.__class__.__name__}: {str(e)[:120]}). "
+              f"Starting anyway: chat and price search work, login/history/admin don't. {hint}")
 
 _safe_create_indexes(users_col, [
     ("username", {"unique": True}),
@@ -3237,14 +3250,21 @@ async def proxy_image(url: str, _rl=Depends(rate_limit("image"))):
 
 @app.get("/health")
 def health():
+    mongo_error = MONGO_CONFIG_ERROR
     try:
+        if mongo_error:
+            raise RuntimeError(mongo_error)
         mongo_client.admin.command("ping")
         mongo_ok = True
-    except Exception:
+    except Exception as e:
         mongo_ok = False
+        # Short reason (e.g. "bad auth", "DNS query name does not exist");
+        # pymongo errors never include the password.
+        mongo_error = mongo_error or f"{type(e).__name__}: {str(e)[:160]}"
     return {
         "ok":               True,
         "mongodb":          mongo_ok,
+        "mongodb_error":    None if mongo_ok else mongo_error,
         "database":         MONGO_DB_NAME,
         "ai_providers":     active_providers(),
         "ai_last_used":     _last_provider["name"],
