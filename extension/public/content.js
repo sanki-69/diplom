@@ -1,3 +1,5 @@
+// Replaced at build time from VITE_API_URL / VITE_WEB_URL (see vite.config.js),
+// so a deployed build of the extension talks to the deployed backend.
 const API_BASE   = "http://127.0.0.1:8000";
 const WEB_URL    = "http://localhost:5173";
 const PROMO_KEY      = "__ai_promo_shown";
@@ -964,7 +966,8 @@ function injectWidget() {
       const data = await res.json();
       removeTyping();
 
-      const answer = data?.answer?.trim() || "Хариу хоосон байна.";
+      // On errors (e.g. 429 "too many requests") the server sends `detail`
+      const answer = data?.answer?.trim() || data?.detail || "Хариу хоосон байна.";
       addBubble(msgs, "ai", answer);
       setStatus("✅ Бэлэн");
 

@@ -16,7 +16,9 @@ import anthropic
 from groq import Groq
 from google import genai as google_genai
 from google.genai import types as genai_types
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Request, status
+from security import (rate_limit, login_guard, client_ip, is_local_request,
+                      fetch_public, BlockedURL)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
@@ -64,7 +66,9 @@ CLAUDE_MODEL      = (os.getenv("CLAUDE_MODEL") or "claude-haiku-4-5-20251001").s
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 if GEMINI_API_KEY:
-    gemini_client     = google_genai.Client(api_key=GEMINI_API_KEY)
+    # 30s cap: an overloaded Gemini call must not stall the whole provider chain
+    gemini_client     = google_genai.Client(api_key=GEMINI_API_KEY,
+                                            http_options=genai_types.HttpOptions(timeout=30000))
     _gemini_available = True
 else:
     gemini_client     = None
@@ -77,10 +81,13 @@ else:
     claude_client    = None
     _claude_available = False
 
-# Active model label for health endpoint
-CHAT_MODEL = GEMINI_CHAT_MODEL if _gemini_available else GROQ_CHAT_MODEL
 
 http_client = httpx.AsyncClient(timeout=40.0)
+
+# Optional proxy for shop scraping. Amazon/Walmart block many cloud-server
+# addresses; a residential or scraping proxy (e.g. http://user:pass@host:port)
+# makes deployed search results closer to what you get at home. Empty = direct.
+SCRAPER_PROXY = (os.getenv("SCRAPER_PROXY_URL") or "").strip() or None
 
 # ─────────────────────────────────────────
 # MONGODB
@@ -254,6 +261,10 @@ class PageTranslateRequest(BaseModel):
     texts: List[str] = []
     source_lang: str = "en"
 
+    def model_post_init(self, _):
+        self.texts = self.texts[:500]
+        self.source_lang = (self.source_lang or "en")[:5]
+
 class ChatMessageSchema(BaseModel):
     role: str
     content: str
@@ -276,7 +287,8 @@ class ChatRequest(BaseModel):
         self.product_title       = (self.product_title or "")[:300]
         self.product_description = (self.product_description or "")[:1000]
         self.search_context      = (self.search_context or "")[:200]
-        self.history             = self.history[-20:]   # cap history depth
+        self.history             = [ChatMessageSchema(role=m.role[:10], content=(m.content or "")[:2000])
+                                    for m in self.history[-20:]]   # cap depth and size
 
 class UserCreate(BaseModel):
     username: str
@@ -493,7 +505,9 @@ def _gemini_call(system_prompt: str, user_prompt: str, max_tokens: int, model: s
     cfg = genai_types.GenerateContentConfig(
         response_mime_type="application/json",
         temperature=0.2,
-        max_output_tokens=max_tokens,
+        # Gemini 3 "thinking" tokens count toward this limit; without headroom a
+        # short request (e.g. 200 tokens) gets cut off mid-sentence.
+        max_output_tokens=max_tokens + (512 if "gemini-3" in model else 0),
     )
     if thinking_cfg is not None:
         cfg.thinking_config = thinking_cfg
@@ -563,49 +577,161 @@ async def gemini_generate_json_async(system_prompt: str, user_prompt: str, max_t
     raise Exception("Gemini failed.")
 
 # ─────────────────────────────────────────
-# UNIFIED AI CHAIN  (Claude → Gemini → Groq)
+# OPENAI-COMPATIBLE FREE PROVIDERS  (OpenRouter, Mistral, any custom one)
 # ─────────────────────────────────────────
-_gemini_down_until: float = 0.0
+# Many providers speak the same "OpenAI chat completions" protocol, so one
+# small function covers them all. Each is enabled just by adding its key.
+def _csv(name: str, default: str) -> list:
+    return [x.strip() for x in _env(name, default).split(",") if x.strip()]
 
-def _gemini_is_up() -> bool:
-    return _gemini_available and time.time() > _gemini_down_until
+COMPAT_PROVIDERS = {
+    # OpenRouter: one free key, ~20 free models (ids ending in ":free").
+    # Free accounts get ~50 requests/day (1000/day after a one-time $10 top-up).
+    # The list is a fallback chain: OpenRouter tries the next model if one is busy.
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key":  _env("OPENROUTER_API_KEY", ""),
+        "models":      _csv("OPENROUTER_MODELS",
+                            "nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-31b-it:free,"
+                            "nvidia/nemotron-3-super-120b-a12b:free,openrouter/free"),
+        "fast_models": _csv("OPENROUTER_FAST_MODELS",
+                            "google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3.5-lightning:free,openrouter/free"),
+        # Reasoning models (e.g. Nemotron Ultra): think briefly, and keep the
+        # reasoning text out of the answer so only the JSON comes back.
+        "extra": {"reasoning": {"effort": _env("OPENROUTER_REASONING_EFFORT", "low"), "exclude": True}},
+    },
+    # Mistral "Experiment" plan: free, very generous monthly quota.
+    "mistral": {
+        "base_url": "https://api.mistral.ai/v1",
+        "api_key":  _env("MISTRAL_API_KEY", ""),
+        "models":      _csv("MISTRAL_MODEL", "mistral-large-latest"),
+        "fast_models": _csv("MISTRAL_FAST_MODEL", "mistral-small-latest"),
+        "extra": {},
+    },
+    # Any other OpenAI-compatible service (Together, DeepSeek, a local Ollama, ...).
+    "custom": {
+        "base_url": _env("CUSTOM_AI_BASE_URL", "").rstrip("/"),
+        "api_key":  _env("CUSTOM_AI_API_KEY", ""),
+        "models":      _csv("CUSTOM_AI_MODEL", ""),
+        "fast_models": _csv("CUSTOM_AI_FAST_MODEL", _env("CUSTOM_AI_MODEL", "")),
+        "extra": {},
+    },
+}
 
-def _mark_gemini_down(seconds: int = 300):
-    global _gemini_down_until
-    _gemini_down_until = time.time() + seconds
-    print(f"[ai] Gemini quota/overload — skipping for {seconds}s, using Groq")
+_THINK_RE = re.compile(r"<think>.*?</think>", re.S | re.I)
+
+def compat_generate_json(name: str, system_prompt: str, user_prompt: str, max_tokens: int, fast: bool) -> dict:
+    cfg = COMPAT_PROVIDERS[name]
+    models = (cfg["fast_models"] if fast else cfg["models"]) or cfg["models"]
+    body = {
+        "model": models[0],
+        "messages": [
+            {"role": "system", "content": system_prompt + "\n\nOutput ONLY valid JSON. No markdown, no explanation."},
+            {"role": "user",   "content": user_prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": max_tokens + 512,          # headroom for models that think first
+        "response_format": {"type": "json_object"},
+        **cfg["extra"],
+    }
+    if name == "openrouter" and len(models) > 1:
+        body["models"] = models                  # OpenRouter's built-in model fallback
+    headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
+    if name == "openrouter":
+        headers.update({"HTTP-Referer": "https://github.com/sanki-69/diplom", "X-Title": "AI Shop"})
+    r = httpx.post(f"{cfg['base_url']}/chat/completions", json=body, headers=headers, timeout=60)
+    if r.status_code >= 400:
+        raise Exception(f"{r.status_code} {r.text[:300]}")
+    data = r.json()
+    if data.get("error"):
+        raise Exception(str(data["error"])[:300])
+    raw = (data["choices"][0]["message"].get("content") or "").strip()
+    raw = _THINK_RE.sub("", raw).strip()
+    if not raw:
+        raise ValueError("empty answer")
+    return _parse_gemini_json(raw)   # same tolerant JSON parsing (strips ``` fences)
+
+# ─────────────────────────────────────────
+# UNIFIED AI CHAIN — tries providers in AI_PROVIDER_ORDER, skipping any
+# without a key or temporarily rate-limited, until one answers.
+# ─────────────────────────────────────────
+# Gemini overload ("503 high demand") is per model, so the same free key can
+# fall back to another Flash model. Fast tasks (query understanding, page
+# translation) start with Flash-Lite, which answers in about a second.
+GEMINI_MODELS      = _csv("GEMINI_MODELS", f"{GEMINI_MODEL},gemini-3.5-flash,gemini-3.5-flash-lite")
+GEMINI_FAST_MODELS = _csv("GEMINI_FAST_MODELS", f"gemini-3.5-flash-lite,{GEMINI_MODEL}")
+
+def _gemini_call_chain(system_prompt, user_prompt, max_tokens, fast):
+    last_err = None
+    for model in dict.fromkeys(GEMINI_FAST_MODELS if fast else GEMINI_MODELS):
+        key = f"gemini:{model}"
+        if time.time() < _down_until.get(key, 0):
+            continue
+        try:
+            return gemini_generate_json(system_prompt, user_prompt, max_tokens, max_retries=1, model=model)
+        except Exception as e:
+            secs = _gemini_skip_seconds(str(e))
+            if not secs:
+                raise                      # not an overload (e.g. bad JSON): let the chain move on
+            _mark_down(key, secs)          # this model is busy → try the next Gemini model
+            last_err = e
+    raise last_err or Exception("503 all Gemini models paused")
+
+def _groq_call_chain(system_prompt, user_prompt, max_tokens, fast):
+    model = FAST_MODEL if fast else GROQ_CHAT_MODEL
+    # one attempt only: on a rate limit, move to the next provider instead of sleeping
+    return groq_generate_json(system_prompt, user_prompt, model=model, max_tokens=max_tokens, max_retries=1)
+
+PROVIDERS = {
+    "gemini":     (lambda: _gemini_available,              _gemini_call_chain),
+    "groq":       (lambda: groq_client is not None,        _groq_call_chain),
+    "openrouter": (lambda: bool(COMPAT_PROVIDERS["openrouter"]["api_key"]),
+                   lambda *a: compat_generate_json("openrouter", *a)),
+    "mistral":    (lambda: bool(COMPAT_PROVIDERS["mistral"]["api_key"]),
+                   lambda *a: compat_generate_json("mistral", *a)),
+    "custom":     (lambda: bool(COMPAT_PROVIDERS["custom"]["base_url"] and COMPAT_PROVIDERS["custom"]["models"]),
+                   lambda *a: compat_generate_json("custom", *a)),
+}
+AI_PROVIDER_ORDER = [p for p in _csv("AI_PROVIDER_ORDER", "gemini,mistral,openrouter,groq,custom") if p in PROVIDERS]
+# Quick helper calls (search-query understanding, page translation) can use a
+# different order, e.g. keep them on Gemini Flash-Lite so a small daily quota
+# like OpenRouter's free plan is saved for real chat answers.
+AI_FAST_PROVIDER_ORDER = [p for p in _csv("AI_FAST_PROVIDER_ORDER", ",".join(AI_PROVIDER_ORDER)) if p in PROVIDERS]
+
+_down_until: dict = {}
+_last_provider: dict = {"name": None}
+
+def active_providers(fast: bool = False) -> list:
+    order = AI_FAST_PROVIDER_ORDER if fast else AI_PROVIDER_ORDER
+    return [p for p in order if PROVIDERS[p][0]()]
+
+def _mark_down(name: str, seconds: int):
+    _down_until[name] = time.time() + seconds
+    print(f"[ai] {name} rate-limited/overloaded — skipping for {seconds}s")
 
 def ai_generate_json(system_prompt: str, user_prompt: str, max_tokens: int = 512, fast: bool = False) -> dict:
-    """Priority: Gemini → Groq."""
-    if _gemini_is_up():
+    errors = []
+    for name in active_providers(fast):
+        if time.time() < _down_until.get(name, 0):
+            continue
         try:
-            return gemini_generate_json(system_prompt, user_prompt, max_tokens)
+            out = PROVIDERS[name][1](system_prompt, user_prompt, max_tokens, fast)
+            _last_provider["name"] = name
+            return out
         except Exception as e:
-            down_secs = _gemini_skip_seconds(str(e))
-            if down_secs:
-                _mark_gemini_down(down_secs)
+            secs = _gemini_skip_seconds(str(e))   # 429 / quota / 503 → sideline for a while
+            if secs:
+                _mark_down(name, secs)
             else:
-                print(f"[ai] Gemini failed ({e}), trying Groq")
-    if groq_client:
-        model = FAST_MODEL if fast else GROQ_CHAT_MODEL
-        return groq_generate_json(system_prompt, user_prompt, model=model, max_tokens=max_tokens)
-    raise Exception("AI provider байхгүй. Groq эсвэл Gemini API key тохируулна уу.")
+                print(f"[ai] {name} failed ({str(e)[:160]}), trying next provider")
+            errors.append(f"{name}: {str(e)[:120]}")
+    if not active_providers():
+        raise Exception("AI provider байхгүй. .env файлд дор хаяж нэг AI түлхүүр (GEMINI/GROQ/OPENROUTER/MISTRAL) тохируулна уу.")
+    raise Exception("Бүх AI provider түр ажиллахгүй байна: " + " | ".join(errors or ["all rate-limited"]))
 
 async def ai_generate_json_async(system_prompt: str, user_prompt: str, max_tokens: int = 512, fast: bool = False) -> dict:
-    """Async priority: Gemini → Groq."""
-    if _gemini_is_up():
-        try:
-            return await gemini_generate_json_async(system_prompt, user_prompt, max_tokens)
-        except Exception as e:
-            down_secs = _gemini_skip_seconds(str(e))
-            if down_secs:
-                _mark_gemini_down(down_secs)
-            else:
-                print(f"[ai] Gemini failed ({e}), trying Groq")
-    if groq_client:
-        model = FAST_MODEL if fast else GROQ_CHAT_MODEL
-        return await groq_generate_json_async(system_prompt, user_prompt, model=model, max_tokens=max_tokens)
-    raise Exception("AI provider байхгүй. Groq эсвэл Gemini API key тохируулна уу.")
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, ai_generate_json, system_prompt, user_prompt, max_tokens, fast)
 
 
 # ─────────────────────────────────────────
@@ -708,11 +834,11 @@ def groq_translate_batch(texts: List[str], source_lang="en") -> List[str]:
     if not texts: return texts
     numbered  = "\n".join(f"{i+1}. {t}" for i, t in enumerate(texts))
     lang_name = "Chinese" if source_lang == "zh" else "English"
-    result    = groq_generate_json(
+    result    = ai_generate_json(
         "You are a translator. Return ONLY valid JSON.",
         f"Translate each line from {lang_name} to Mongolian Cyrillic.\n"
         f'Return JSON: {{"translations": ["..."]}} same count as input.\n\n{numbered}',
-        model=FAST_MODEL, max_tokens=3000,
+        max_tokens=3000, fast=True,
     )
     translations = result.get("translations", [])
     if isinstance(translations, list) and len(translations) == len(texts):
@@ -2553,7 +2679,7 @@ async def _fetch_aliexpress_api(query: str) -> list:
         "Sec-Fetch-Site":  "same-origin",
     }
     try:
-        async with httpx.AsyncClient(headers=headers, timeout=20, follow_redirects=True) as cl:
+        async with httpx.AsyncClient(headers=headers, timeout=20, follow_redirects=True, proxy=SCRAPER_PROXY) as cl:
             r = await cl.get(f"{base_url}?{params}")
         if r.status_code != 200:
             return []
@@ -2585,7 +2711,7 @@ async def _fetch_aliexpress_mobile(query: str) -> list:
         "Referer":         "https://m.aliexpress.com/",
     }
     try:
-        async with httpx.AsyncClient(headers=headers, timeout=20, follow_redirects=True) as cl:
+        async with httpx.AsyncClient(headers=headers, timeout=20, follow_redirects=True, proxy=SCRAPER_PROXY) as cl:
             r = await cl.get(mob_url)
         if r.status_code != 200:
             return []
@@ -2897,7 +3023,7 @@ def _is_blocked_page(html: str) -> bool:
 
 
 async def _fetch_url(url: str, headers: dict, timeout: int = 25) -> "httpx.Response":
-    async with httpx.AsyncClient(headers=headers, timeout=timeout, follow_redirects=True) as cl:
+    async with httpx.AsyncClient(headers=headers, timeout=timeout, follow_redirects=True, proxy=SCRAPER_PROXY) as cl:
         return await cl.get(url)
 
 
@@ -3041,12 +3167,15 @@ def get_tracked_queries() -> list:
     doc = mdb["settings"].find_one({"_id": TRACKED_QUERIES_KEY})
     return doc.get("queries", []) if doc else []
 
+MAX_TRACKED_QUERIES = int(_env("MAX_TRACKED_QUERIES", "100"))
+
 def add_tracked_query(query: str):
     try:
-        mdb["settings"].update_one(
+        col = mdb["settings"]
+        col.update_one({"_id": TRACKED_QUERIES_KEY}, {"$pull": {"queries": query}}, upsert=True)
+        col.update_one(   # move to the end, keep only the newest N
             {"_id": TRACKED_QUERIES_KEY},
-            {"$addToSet": {"queries": query}},
-            upsert=True,
+            {"$push": {"queries": {"$each": [query], "$slice": -MAX_TRACKED_QUERIES}}},
         )
     except Exception as e:
         print(f"[track] could not save tracked query (MongoDB unavailable?): {e.__class__.__name__}")
@@ -3067,6 +3196,9 @@ class ScrapeRequest(BaseModel):
     query: str
     track: bool = True   # add to daily re-scrape list
 
+    def model_post_init(self, _):
+        self.query = (self.query or "")[:200]
+
 class CrawlRequest(BaseModel):
     url: str             # starting URL to crawl for product links
 
@@ -3077,9 +3209,10 @@ class CrawlRequest(BaseModel):
 from fastapi.responses import Response as FastAPIResponse
 
 @app.get("/proxy-image")
-async def proxy_image(url: str):
-    """Proxy product images to bypass hotlink-protection on stores like Amazon."""
-    if not url or not url.startswith("http"):
+async def proxy_image(url: str, _rl=Depends(rate_limit("image"))):
+    """Proxy product images to bypass hotlink-protection on stores like Amazon.
+    Only public http(s) addresses, only image responses, at most 5 MB."""
+    if not url or not url.startswith("http") or len(url) > 2000:
         raise HTTPException(400, "Invalid URL")
     _img_headers = {
         "User-Agent": _MOBILE_UA,
@@ -3087,17 +3220,19 @@ async def proxy_image(url: str):
         "Accept":     "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
     }
     try:
-        async with httpx.AsyncClient(headers=_img_headers, timeout=12, follow_redirects=True) as cl:
-            r = await cl.get(url)
-        if r.status_code != 200:
-            raise HTTPException(404)
-        ct = r.headers.get("content-type", "image/jpeg")
-        return FastAPIResponse(content=r.content, media_type=ct,
-                               headers={"Cache-Control": "public, max-age=86400"})
-    except HTTPException:
-        raise
+        r = await fetch_public(url, headers=_img_headers, timeout=12)
+    except BlockedURL:
+        raise HTTPException(400, "URL not allowed")
     except Exception:
         raise HTTPException(502, "Image fetch failed")
+    ct = (r.content_type or "").split(";")[0].strip().lower()
+    if r.status_code != 200:
+        raise HTTPException(404)
+    if not ct.startswith("image/") or ct == "image/svg+xml":   # SVG can carry scripts
+        raise HTTPException(415, "Not an image")
+    return FastAPIResponse(content=r.content, media_type=ct,
+                           headers={"Cache-Control": "public, max-age=86400",
+                                    "X-Content-Type-Options": "nosniff"})
 
 
 @app.get("/health")
@@ -3111,8 +3246,9 @@ def health():
         "ok":               True,
         "mongodb":          mongo_ok,
         "database":         MONGO_DB_NAME,
-        "chat_model":       CHAT_MODEL,
-        "fallback_model":   GROQ_CHAT_MODEL if GROQ_API_KEY else None,
+        "ai_providers":     active_providers(),
+        "ai_last_used":     _last_provider["name"],
+        "ai_paused":        {k: int(v - time.time()) for k, v in _down_until.items() if v > time.time()},
         "embed_model":      GEMINI_EMBED_MODEL if _gemini_available else None,
         "has_claude_key":   _claude_available,
         "has_gemini_key":   _gemini_available,
@@ -3120,8 +3256,18 @@ def health():
     }
 
 # ── AUTH ──────────────────────────────────
+# Usernames listed in ADMIN_USERNAMES become admin automatically when they
+# sign up or log in. This is the safe way to create the first admin on a server.
+ADMIN_USERNAMES = {u.lower() for u in _csv("ADMIN_USERNAMES", "")}
+
+def _promote_if_listed(doc: dict) -> dict:
+    if doc and doc.get("username", "").lower() in ADMIN_USERNAMES and not doc.get("is_admin"):
+        users_col.update_one({"id": doc["id"]}, {"$set": {"is_admin": True}})
+        doc["is_admin"] = True
+    return doc
+
 @app.post("/auth/register")
-def register(body: UserCreate):
+def register(body: UserCreate, _rl=Depends(rate_limit("register"))):
     if users_col.find_one({"username": body.username}):
         raise HTTPException(400, detail="Нэр аль хэдийн бүртгэлтэй байна")
     if users_col.find_one({"email": body.email}):
@@ -3135,19 +3281,25 @@ def register(body: UserCreate):
         "created_at":      datetime.now(timezone.utc).isoformat(),
     }
     users_col.insert_one(user_doc)
+    _promote_if_listed(user_doc)
     token = make_token(body.username)
     return {
         "access_token": token,
         "token_type":   "bearer",
         "user":         {"id": user_doc["id"], "username": body.username,
-                         "email": body.email, "is_admin": False},
+                         "email": body.email, "is_admin": user_doc["is_admin"]},
     }
 
 @app.post("/auth/login")
-def login(body: UserLoginRequest):
+def login(body: UserLoginRequest, request: Request, _rl=Depends(rate_limit("login"))):
+    ip = client_ip(request)
+    login_guard.check(body.username, ip)          # 429 while locked out
     doc = users_col.find_one({"username": body.username})
-    if not doc or not verify_password(body.password, doc["hashed_password"]):
+    if not doc or not verify_password(body.password[:200], doc["hashed_password"]):
+        login_guard.failed(body.username, ip)
         raise HTTPException(401, detail="Нэр эсвэл нууц үг буруу байна")
+    login_guard.succeeded(body.username, ip)
+    _promote_if_listed(doc)
     token = make_token(body.username)
     return {
         "access_token": token,
@@ -3166,7 +3318,7 @@ def me(current_user: UserObj = Depends(require_user)):
 def list_products(category: Optional[str] = None, search: Optional[str] = None):
     query = {}
     if category: query["category"] = category
-    if search:   query["name"]     = {"$regex": search, "$options": "i"}
+    if search:   query["name"]     = {"$regex": re.escape(search[:100]), "$options": "i"}
     docs = list(products_col.find(query, {"_id": 0}).sort("id", ASCENDING))
     return docs
 
@@ -3241,7 +3393,8 @@ def delete_product(product_id: int, current_user: UserObj = Depends(require_user
 
 # ── CHAT ──────────────────────────────────
 @app.post("/chat")
-async def chat(req: ChatRequest, current_user: Optional[UserObj] = Depends(get_current_user)):
+async def chat(req: ChatRequest, current_user: Optional[UserObj] = Depends(get_current_user),
+               _rl=Depends(rate_limit("chat"))):
     try:
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, do_chat, req)
@@ -3357,8 +3510,12 @@ def admin_delete_user(user_id: int, me: UserObj = Depends(require_admin)):
     return {"ok": True}
 
 @app.post("/admin/make-first-admin")
-def make_first_admin(me: UserObj = Depends(require_user)):
-    """Bootstrap: the logged-in caller becomes admin, but only while no admin exists."""
+def make_first_admin(request: Request, me: UserObj = Depends(require_user)):
+    """Bootstrap: the logged-in caller becomes admin, but only while no admin
+    exists AND the request comes from this computer (or the user is listed in
+    ADMIN_USERNAMES). On a public server a stranger therefore can't claim it."""
+    if not (is_local_request(request) or me.username.lower() in ADMIN_USERNAMES):
+        raise HTTPException(403, detail="Admin тохиргоог зөвхөн сервер дээрээс эсвэл ADMIN_USERNAMES-р хийнэ")
     if users_col.find_one({"is_admin": True}):
         raise HTTPException(400, detail="Admin аль хэдийн байна")
     users_col.update_one({"id": me.id}, {"$set": {"is_admin": True}})
@@ -3409,14 +3566,14 @@ def admin_db_delete_row(collection_name: str, row_id: int, _: UserObj = Depends(
 
 # ── ANALYZE / TRANSLATE ───────────────────
 @app.post("/analyze")
-def analyze(req: AnalyzeRequest):
+def analyze(req: AnalyzeRequest, _rl=Depends(rate_limit("chat"))):
     try:    return do_analyze(req)
     except Exception as e:
         print(f"[analyze/error] {e}")
         return {"error": "analyze_failed"}
 
 @app.post("/translate_page")
-async def translate_page(req: PageTranslateRequest):
+async def translate_page(req: PageTranslateRequest, _rl=Depends(rate_limit("translate"))):
     try:    return await do_translate_page(req.texts[:500], req.source_lang)
     except Exception as e:
         print(f"[translate/error] {e}")
@@ -3429,17 +3586,17 @@ class InterpretRequest(BaseModel):
     query: str
 
 @app.post("/search/understand")
-def search_understand(req: InterpretRequest):
+def search_understand(req: InterpretRequest, _rl=Depends(rate_limit("light"))):
     """
     Interpret any user query (Mongolian Latin, Cyrillic, English) into
     clean English product search terms.
     """
-    result = interpret_query(req.query.strip())
+    result = interpret_query(req.query.strip()[:200])
     return result
 
 @app.get("/search/semantic")
-def search_semantic(q: str, limit: int = 5):
-    q = (q or "").strip()
+def search_semantic(q: str, limit: int = 5, _rl=Depends(rate_limit("light"))):
+    q = (q or "").strip()[:200]
     if not q:
         raise HTTPException(400, detail="q шаардлагатай")
     if not _gemini_available:
@@ -3449,7 +3606,7 @@ def search_semantic(q: str, limit: int = 5):
     return {"query": q, "results": results, "count": len(results)}
 
 @app.post("/compare")
-async def compare_products(req: ScrapeRequest):
+async def compare_products(req: ScrapeRequest, _rl=Depends(rate_limit("search"))):
     """
     Compare a product query across Amazon, eBay, Walmart, AliExpress, BestBuy.
     Auto-interprets Mongolian (Latin/Cyrillic) or English input.
@@ -3544,7 +3701,7 @@ async def compare_products(req: ScrapeRequest):
 
 
 @app.post("/scrape")
-async def scrape_shop(req: ScrapeRequest):
+async def scrape_shop(req: ScrapeRequest, _: UserObj = Depends(require_admin)):
     """
     Manually trigger a fresh scrape for a query across all shops.
     Always fetches live data (ignores cache).
@@ -3561,7 +3718,7 @@ async def scrape_shop(req: ScrapeRequest):
 
 
 @app.post("/crawl")
-async def crawl_url(req: CrawlRequest):
+async def crawl_url(req: CrawlRequest, _: UserObj = Depends(require_admin)):
     """
     Crawl a given URL and extract all product-looking links from the page.
     Returns up to 30 links with title + href.
@@ -3570,10 +3727,9 @@ async def crawl_url(req: CrawlRequest):
     if not url:
         raise HTTPException(400, detail="url шаардлагатай")
     try:
-        async with httpx.AsyncClient(headers=SCRAPE_HEADERS, timeout=15, follow_redirects=True) as client:
-            r = await client.get(url)
+        r = await fetch_public(url, headers=SCRAPE_HEADERS, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
-        base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+        base = f"{urlparse(r.url).scheme}://{urlparse(r.url).netloc}"
 
         links = []
         seen  = set()
@@ -3597,8 +3753,11 @@ async def crawl_url(req: CrawlRequest):
                     links.append({"title": title, "url": href})
 
         return {"url": url, "links": links, "total": len(links)}
+    except BlockedURL:
+        raise HTTPException(400, detail="Зөвхөн нийтэд нээлттэй вэб хаяг зөвшөөрөгдөнө")
     except Exception as e:
-        raise HTTPException(500, detail=str(e))
+        print(f"[crawl/error] {e}")
+        raise HTTPException(502, detail="Хуудсыг татаж чадсангүй")
 
 
 @app.get("/compare/cached")

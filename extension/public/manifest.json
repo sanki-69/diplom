@@ -12,9 +12,10 @@
   "host_permissions": ["<all_urls>"],
 
   "icons": {
-    "16": "vite.svg",
-    "48": "vite.svg",
-    "128": "vite.svg"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
 
   "content_scripts": [

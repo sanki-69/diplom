@@ -9,3 +9,4 @@ backend/*.db
 *.synctex*
 thesis.log
 *.log
+.pytest_cache/

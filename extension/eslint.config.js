@@ -30,6 +30,11 @@ export default defineConfig([
     },
   },
   {
+    // Build config runs in Node, not the browser
+    files: ['vite.config.js'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     // Chrome extension scripts (content script + service worker) use the `chrome` API
     files: ['public/**/*.js'],
     languageOptions: {

@@ -15,6 +15,12 @@ services:
         value: "3.12.8"
       - key: SECRET_KEY
         generateValue: true          # Render creates a random secret for you
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip      # real visitor IP behind Render's Cloudflare (for rate limits)
+      - key: ADMIN_USERNAMES
+        sync: false                  # your username(s); they become admin on sign-up/login
+      - key: SCRAPER_PROXY_URL
+        sync: false                  # optional: proxy for shop scraping (leave empty)
       - key: MONGODB_URL
         sync: false                  # mongodb+srv://... from MongoDB Atlas
       - key: MONGODB_DB
@@ -25,6 +31,20 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.8-flash
+      - key: GEMINI_MODELS
+        value: gemini-3.8-flash,gemini-3.5-flash,gemini-3.5-flash-lite
+      - key: GEMINI_FAST_MODELS
+        value: gemini-3.5-flash-lite,gemini-3.8-flash
+      - key: AI_PROVIDER_ORDER
+        value: openrouter,gemini,mistral,groq,custom
+      - key: AI_FAST_PROVIDER_ORDER
+        value: gemini,mistral,openrouter,groq,custom
+      - key: OPENROUTER_MODELS
+        value: nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3-super-120b-a12b:free
+      - key: MISTRAL_API_KEY
+        sync: false                  # optional: console.mistral.ai → API Keys
+      - key: OPENROUTER_API_KEY
+        sync: false                  # optional: openrouter.ai/keys
       - key: GEMINI_EMBED_MODEL
         value: gemini-embedding-001
       - key: GROQ_CHAT_MODEL
