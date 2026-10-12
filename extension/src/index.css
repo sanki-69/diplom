@@ -15,7 +15,22 @@
   --mute:     #7a7a7a;   /* secondary text                             */
   --mute-2:   #a8a8a8;
   --sale:     #d0021b;   /* the single accent: best price / errors     */
+  --sale-bg:  #fdf2f3;
   --ok:       #1a7f37;
+
+  /* Text/icons placed ON an --ink surface (black bars, primary buttons) */
+  --on-ink:      #ffffff;
+  --on-ink-mute: #bdbdbd;
+  --on-ink-dim:  #555555;
+
+  --header-bg:   rgba(255, 255, 255, 0.96);
+  --skeleton-a:  #f0f0f0;
+  --skeleton-b:  #e6e6e6;
+  --outline-num: #dcdcdc;   /* big outlined slide numbers */
+  --scroll:      #cfcfcf;
+  --shadow:      rgba(0, 0, 0, 0.35);
+  --art-filter:  none;      /* drawn illustrations */
+  color-scheme: light;
 
   --display:  'Oswald', 'Arial Narrow', sans-serif;
   --body:     'Montserrat', 'Segoe UI', system-ui, sans-serif;
@@ -23,6 +38,55 @@
   --header-h: 72px;      /* sticky main header                        */
   --chat-w:   360px;     /* AI assistant sidebar                       */
   --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────
+   Same monochrome idea, inverted: near-black page, light "ink".
+   Black bars and buttons become light, so they still stand out.
+   Set by data-theme on <html> (see index.html + src/theme.js);
+   without JavaScript the system setting is followed. */
+:root[data-theme="dark"] {
+  --ink:      #f2f2f2;
+  --ink-2:    #d9d9d9;
+  --paper:    #0f0f0f;
+  --mist:     #1a1a1a;
+  --mist-2:   #242424;
+  --line:     #2b2b2b;
+  --mute:     #9b9b9b;
+  --mute-2:   #6c6c6c;
+  --sale:     #ff5a6a;
+  --sale-bg:  rgba(255, 90, 106, 0.12);
+  --ok:       #4ade80;
+
+  --on-ink:      #0f0f0f;
+  --on-ink-mute: #4d4d4d;
+  --on-ink-dim:  #9a9a9a;
+
+  --header-bg:   rgba(15, 15, 15, 0.92);
+  --skeleton-a:  #1c1c1c;
+  --skeleton-b:  #262626;
+  --outline-num: #2e2e2e;
+  --scroll:      #3a3a3a;
+  --shadow:      rgba(0, 0, 0, 0.8);
+  --art-filter:  invert(0.9);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ink: #f2f2f2; --ink-2: #d9d9d9; --paper: #0f0f0f; --mist: #1a1a1a; --mist-2: #242424;
+    --line: #2b2b2b; --mute: #9b9b9b; --mute-2: #6c6c6c; --sale: #ff5a6a; --sale-bg: rgba(255, 90, 106, 0.12);
+    --ok: #4ade80; --on-ink: #0f0f0f; --on-ink-mute: #4d4d4d; --on-ink-dim: #9a9a9a;
+    --header-bg: rgba(15, 15, 15, 0.92); --skeleton-a: #1c1c1c; --skeleton-b: #262626;
+    --outline-num: #2e2e2e; --scroll: #3a3a3a; --shadow: rgba(0, 0, 0, 0.8); --art-filter: invert(0.9);
+    color-scheme: dark;
+  }
+}
+
+/* Drawn illustrations (not product photos) flip with the theme */
+.art { filter: var(--art-filter); }
+/* Smooth colour change when switching themes (not on first paint) */
+html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease, fill .25s ease !important;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -55,7 +119,7 @@ img { display: block; max-width: 100%; }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cfcfcf; }
+::-webkit-scrollbar-thumb { background: var(--scroll); }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink); }
 
 /* ── Type helpers ─────────────────────────────────────────────── */
@@ -171,9 +235,12 @@ img { display: block; max-width: 100%; }
   border: 1px solid var(--line);
   transition: border-color .2s, box-shadow .3s var(--ease);
 }
-.p-card:hover { border-color: var(--ink); box-shadow: 0 18px 40px -24px rgba(0,0,0,.35); }
+.p-card:hover { border-color: var(--ink); box-shadow: 0 18px 40px -24px var(--shadow); }
 .p-card .p-img {
-  position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: var(--paper);
+  position: relative; aspect-ratio: 1 / 1; overflow: hidden;
+  /* Product photos always sit on white: many are transparent PNGs of dark
+     products that would disappear on a dark background. */
+  background: #ffffff;
   border-bottom: 1px solid var(--line);
 }
 .p-card .p-img img {
@@ -217,7 +284,7 @@ img { display: block; max-width: 100%; }
 .hero .hero-num {
   position: absolute; right: 2%; bottom: -34px;
   font-family: var(--display); font-weight: 700; font-size: 200px; line-height: 1;
-  color: transparent; -webkit-text-stroke: 1px #dcdcdc; pointer-events: none; user-select: none;
+  color: transparent; -webkit-text-stroke: 1px var(--outline-num); pointer-events: none; user-select: none;
 }
 .hero .hero-art { display: flex; justify-content: center; align-items: center; padding: 30px; }
 .hero .hero-art svg { width: min(340px, 90%); height: auto; animation: floaty 6s ease-in-out infinite; }
@@ -229,7 +296,7 @@ img { display: block; max-width: 100%; }
 }
 .hero .hero-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; }
 .hero .hero-dots { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
-.hero .hero-dots button { width: 26px; height: 3px; border: none; background: #cfcfcf; transition: background .2s, width .3s var(--ease); }
+.hero .hero-dots button { width: 26px; height: 3px; border: none; background: var(--mute-2); transition: background .2s, width .3s var(--ease); }
 .hero .hero-dots button.active { background: var(--ink); width: 44px; }
 @media (max-width: 760px) {
   .hero { grid-template-columns: 1fr; text-align: center; }
@@ -275,7 +342,7 @@ img { display: block; max-width: 100%; }
 .marquee { background: var(--ink); color: var(--paper); overflow: hidden; white-space: nowrap; }
 .marquee .track { display: inline-flex; gap: 48px; padding: 18px 0; animation: marquee 28s linear infinite; }
 .marquee span { font-family: var(--display); font-size: 22px; letter-spacing: .12em; text-transform: uppercase; }
-.marquee span.sep { color: #555; }
+.marquee span.sep { color: var(--on-ink-dim); }
 
 /* ── Forms ────────────────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
@@ -290,11 +357,11 @@ img { display: block; max-width: 100%; }
 /* ── Feedback / loading ───────────────────────────────────────── */
 .spinner {
   display: inline-block; width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,.35); border-top-color: currentColor; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; border-radius: 50%;
   animation: spin .7s linear infinite;
 }
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e6e6e6 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.6s infinite linear;
 }

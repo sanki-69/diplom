@@ -75,7 +75,7 @@ function groupByDate(sessions) {
 
 // ── Skeleton loader ────────────────────────────────────────────────────────────
 const Skeleton = ({ w = "100%", h = 14, r = 6 }) => (
-  <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,#ececec 25%,#f5f5f5 50%,#ececec 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
+  <div style={{ width: w, height: h, borderRadius: r, background: "linear-gradient(90deg,var(--skeleton-a) 25%,var(--skeleton-b) 50%,var(--skeleton-a) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
 );
 
 export default function HistoryPage({ user }) {
@@ -226,7 +226,7 @@ export default function HistoryPage({ user }) {
           <div style={{ flex: 1, padding: "24px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
             {[0,1,2,3].map(i => (
               <div key={i} style={{ display: "flex", gap: 10, flexDirection: i % 2 === 0 ? "row" : "row-reverse" }}>
-                <div style={{ width: 30, height: 30, borderRadius: 0, background: "#ececec", flexShrink: 0 }} />
+                <div style={{ width: 30, height: 30, borderRadius: 0, background: "var(--mist-2)", flexShrink: 0 }} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 5, maxWidth: "60%", alignItems: i % 2 === 0 ? "flex-start" : "flex-end" }}>
                   <Skeleton w={180 + i * 20} h={14} />
                   <Skeleton w={120 + i * 10} h={14} />
@@ -250,7 +250,7 @@ export default function HistoryPage({ user }) {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 boxShadow: "none",
               }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--on-ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </div>
@@ -294,7 +294,7 @@ export default function HistoryPage({ user }) {
                             : C.panel,
                           border: isUser ? "none" : `1.5px solid ${C.border}`,
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          color: isUser ? "#fff" : C.dim,
+                          color: isUser ? "var(--on-ink)" : C.dim,
                         }}>
                           {isUser ? <IconUser /> : <IconBot />}
                         </div>
@@ -317,7 +317,7 @@ export default function HistoryPage({ user }) {
                             background: isUser ? C.userBg : C.aiBg,
                             border: isUser ? "none" : `1px solid ${C.border}`,
                             boxShadow: "none",
-                            color: isUser ? "#fff" : C.text,
+                            color: isUser ? "var(--on-ink)" : C.text,
                             fontSize: 13.5,
                             lineHeight: 1.6,
                             whiteSpace: "pre-wrap",

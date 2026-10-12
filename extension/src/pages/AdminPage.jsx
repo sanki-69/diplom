@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle.jsx";
 import {
   adminGetStats, adminGetUsers, adminDeleteUser, adminCreateUser,
   adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
@@ -7,25 +8,28 @@ import {
 } from "../api.js";
 
 /* ── palette ─────────────────────────────────────────────────── */
+// Colours follow the site theme (index.css variables); the sidebar stays dark.
 const C = {
   sidebar:    "#111111",
   sideHover:  "rgba(255,255,255,0.07)",
   sideActive: "rgba(255,255,255,0.14)",
-  bg:         "#f5f5f5",
-  panel:      "#ffffff",
-  accent:     "#111111",
-  accentDim:  "#111111",
-  border:     "#e5e5e5",
-  borderDark: "#cfcfcf",
-  text:       "#111111",
-  textMuted:  "#6b6b6b",
-  dim:        "#a8a8a8",
-  success:    "#1a7f37",
-  successBg:  "rgba(26,127,55,0.08)",
-  error:      "#d0021b",
-  errorBg:    "rgba(208,2,27,0.06)",
+  bg:         "var(--mist)",
+  panel:      "var(--paper)",
+  accent:     "var(--ink)",
+  accentDim:  "var(--ink)",
+  onAccent:   "var(--on-ink)",
+  border:     "var(--line)",
+  borderDark: "var(--mute-2)",
+  text:       "var(--ink)",
+  textMuted:  "var(--mute)",
+  dim:        "var(--mute-2)",
+  success:    "var(--ok)",
+  successBg:  "rgba(26,127,55,0.10)",
+  error:      "var(--sale)",
+  errorBg:    "var(--sale-bg)",
   warning:    "#b26a00",
-  badge:      "#f0f0f0",
+  badge:      "var(--mist-2)",
+  rowHover:   "var(--mist)",
 };
 
 const SIDEBAR_W = 230;
@@ -81,7 +85,7 @@ function NavItem({ icon: Icon, label, active, onClick, badge }) {
       <Icon {...iconSz} />
       <span style={{ flex: 1 }}>{label}</span>
       {badge > 0 && (
-        <span style={{ background: C.accent, color: "#fff", borderRadius:0, fontSize: 10, fontWeight: 700, padding: "1px 7px" }}>
+        <span style={{ background: C.accent, color: C.onAccent, borderRadius:0, fontSize: 10, fontWeight: 700, padding: "1px 7px" }}>
           {badge}
         </span>
       )}
@@ -109,9 +113,9 @@ function Badge({ active = true, text }) {
 function RoleBadge({ isAdmin }) {
   return (
     <span style={{
-      background: isAdmin ? "rgba(59,111,247,0.1)" : C.badge,
+      background: isAdmin ? "var(--mist-2)" : C.badge,
       color: isAdmin ? C.accent : C.textMuted,
-      border: `1px solid ${isAdmin ? "rgba(59,111,247,0.25)" : C.border}`,
+      border: `1px solid ${isAdmin ? "var(--ink)" : C.border}`,
       borderRadius:0, fontSize: 11, fontWeight: 700, padding: "3px 10px",
     }}>
       {isAdmin ? "Admin" : "User"}
@@ -126,7 +130,7 @@ function TH({ children, w }) {
       textAlign: "left", padding: "11px 16px",
       color: C.textMuted, fontSize: 11, fontWeight: 700,
       letterSpacing: "0.06em", textTransform: "uppercase",
-      background: "#f7f7f7", borderBottom: `1px solid ${C.border}`,
+      background: C.rowHover, borderBottom: `1px solid ${C.border}`,
       whiteSpace: "nowrap", width: w,
     }}>{children}</th>
   );
@@ -205,7 +209,7 @@ function ActBtn({ onClick, danger, children }) {
         fontSize: 11, fontWeight: 600, transition: "background .12s",
         background: danger
           ? hov ? "rgba(229,62,62,0.15)" : "rgba(229,62,62,0.08)"
-          : hov ? "rgba(59,111,247,0.15)" : "rgba(59,111,247,0.08)",
+          : hov ? "var(--mist-2)" : "var(--mist)",
         color: danger ? C.error : C.accent,
         display: "flex", alignItems: "center", gap: 4,
       }}
@@ -217,7 +221,7 @@ function ActBtn({ onClick, danger, children }) {
 function Modal({ title, onClose, children }) {
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{
-      position: "fixed", inset: 0, background: "rgba(13,27,62,0.45)", zIndex: 300,
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300,
       display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
     }}>
       <div style={{
@@ -246,10 +250,10 @@ function Field({ label, value, onChange, placeholder, type = "text", area }) {
         ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={3}
             style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:0, color:C.text,
               padding:"9px 12px", fontSize:13, outline:"none", resize:"vertical",
-              boxSizing:"border-box", fontFamily:"inherit", background:"#fafbfe" }} />
+              boxSizing:"border-box", fontFamily:"inherit", background:C.panel }} />
         : <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
             style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:0, color:C.text,
-              padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box", background:"#fafbfe" }}
+              padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box", background:C.panel }}
             onFocus={e => e.target.style.borderColor = C.accent}
             onBlur={e => e.target.style.borderColor = C.border} />
       }
@@ -288,7 +292,7 @@ function Dashboard({ stats, onNav }) {
               <button key={a.tab} onClick={() => onNav(a.tab)} style={{
                 background: a.primary ? `linear-gradient(135deg,${C.accent},${C.accentDim})` : "transparent",
                 border: a.primary ? "none" : `1px solid ${C.border}`,
-                color: a.primary ? "#fff" : C.text,
+                color: a.primary ? C.onAccent : C.text,
                 borderRadius:0, padding: "10px 16px", fontSize: 13,
                 fontWeight: 600, cursor: "pointer", textAlign: "left",
               }}>{a.label}</button>
@@ -380,7 +384,7 @@ function Users({ currentUser, flash }) {
         <button onClick={() => setShowAdd(v => !v)} style={{
           display: "flex", alignItems: "center", gap: 7, padding: "9px 18px",
           background: `linear-gradient(135deg,${C.accent},${C.accentDim})`,
-          border: "none", borderRadius:0, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+          border: "none", borderRadius:0, color: C.onAccent, fontSize: 13, fontWeight: 700, cursor: "pointer",
         }}>
           <Ic.Plus width={15} height={15} /> Хэрэглэгч нэмэх
         </button>
@@ -406,7 +410,7 @@ function Users({ currentUser, flash }) {
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button onClick={addUser} disabled={adding} style={{
               padding: "9px 20px", background: C.accent, border: "none", borderRadius:0,
-              color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              color: C.onAccent, fontSize: 13, fontWeight: 700, cursor: "pointer",
             }}>{adding ? "Нэмж байна..." : "Нэмэх"}</button>
             <button onClick={() => setShowAdd(false)} style={{
               padding: "9px 16px", background: C.badge, border: `1px solid ${C.border}`, borderRadius:0,
@@ -443,7 +447,7 @@ function Users({ currentUser, flash }) {
             {filtered.map((u, i) => (
               <tr key={u.id}
                 style={{ borderBottom: `1px solid ${C.border}`, transition: "background .1s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "#f7f7f7"}
+                onMouseEnter={e => e.currentTarget.style.background = C.rowHover}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 <td style={{ padding: "13px 16px", color: C.dim, fontSize: 13 }}>{i + 1}</td>
@@ -544,7 +548,7 @@ function Products({ flash }) {
         <button onClick={openNew} style={{
           display: "flex", alignItems: "center", gap: 7,
           background: `linear-gradient(135deg,${C.accent},${C.accentDim})`,
-          border: "none", color: "#fff", borderRadius:0,
+          border: "none", color: C.onAccent, borderRadius:0,
           padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer",
         }}>
           <Ic.Plus width={14} height={14} /> Шинэ бараа
@@ -572,7 +576,7 @@ function Products({ flash }) {
               )}
               {filtered.map(p => (
                 <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}` }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#f7f7f7"}
+                  onMouseEnter={e => e.currentTarget.style.background = C.rowHover}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ width:40, height:40, borderRadius:0, overflow:"hidden", background:C.bg, flexShrink:0 }}>
@@ -627,7 +631,7 @@ function Products({ flash }) {
           <div style={{ display:"flex", gap:10 }}>
             <button onClick={handleSave} disabled={saving} style={{
               flex:1, background:`linear-gradient(135deg,${C.accent},${C.accentDim})`,
-              border:"none", color:"#fff", borderRadius:0, padding:"12px 0",
+              border:"none", color:C.onAccent, borderRadius:0, padding:"12px 0",
               fontWeight:700, fontSize:14, cursor: saving ? "wait":"pointer" }}>
               {saving ? "Хадгалж байна..." : "Хадгалах"}
             </button>
@@ -705,7 +709,7 @@ function Database({ flash }) {
           <button key={t.key} onClick={() => switchTable(t.key)} style={{
             padding:"9px 18px", borderRadius:0, border:`1px solid ${table===t.key ? C.accent : C.border}`,
             background: table===t.key ? C.accent : C.panel,
-            color: table===t.key ? "#fff" : C.textMuted,
+            color: table===t.key ? C.onAccent : C.textMuted,
             fontWeight:600, fontSize:13, cursor:"pointer", transition:"all .12s",
           }}>{t.label}</button>
         ))}
@@ -745,7 +749,7 @@ function Database({ flash }) {
               )}
               {data.rows.map((row,i) => (
                 <tr key={i} style={{ borderBottom:`1px solid ${C.border}` }}
-                  onMouseEnter={e=>e.currentTarget.style.background="#f7f7f7"}
+                  onMouseEnter={e=>e.currentTarget.style.background=C.rowHover}
                   onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                   {data.columns.map(col => (
                     <td key={col} style={{ padding:"10px 16px", color:col==="id"?C.accent:C.text,
@@ -811,7 +815,7 @@ export default function AdminPage({ user }) {
       }}>
         {/* Brand */}
         <div style={{ display:"flex", alignItems:"center", gap:10, padding:"0 6px 24px" }}>
-          <div style={{ width:32, height:32, borderRadius:0, background:C.accent,
+          <div style={{ width:32, height:32, borderRadius:0, background:"#d0021b",
             display:"flex", alignItems:"center", justifyContent:"center" }}>
             <Ic.Box width={16} height={16} stroke="#fff" />
           </div>
@@ -836,6 +840,9 @@ export default function AdminPage({ user }) {
         <div style={{ borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:12, display:"flex", flexDirection:"column", gap:2 }}>
           <NavItem icon={Ic.Home} label="Дэлгүүр рүү" onClick={()=>navigate("/search")} />
           <NavItem icon={Ic.LogOut} label="Гарах" onClick={()=>{ navigate("/search"); }} />
+          <ThemeToggle className="" style={{ margin:"8px 6px 0", width:36, height:36, display:"flex",
+            alignItems:"center", justifyContent:"center", background:"transparent", color:"#fff",
+            border:"1px solid rgba(255,255,255,0.18)", cursor:"pointer" }} />
         </div>
       </aside>
 

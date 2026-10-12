@@ -12,7 +12,7 @@ const SHADOW = "#e1e1e1";
 /* ── Large illustrations (viewBox 200×200) ──────────────────────── */
 
 export const PhoneArt = (p) => (
-  <svg viewBox="0 0 200 200" aria-hidden="true" {...p}>
+  <svg className="art" viewBox="0 0 200 200" aria-hidden="true" {...p}>
     <ellipse cx="100" cy="188" rx="48" ry="6" fill={SHADOW} />
     <rect x="58" y="22" width="76" height="154" rx="12" transform="rotate(-10 96 99)" fill="none" stroke="#cfcfcf" strokeWidth="1.5" />
     <rect x="64" y="16" width="76" height="160" rx="13" fill={INK} />
@@ -32,7 +32,7 @@ export const PhoneArt = (p) => (
 );
 
 export const HeadphonesArt = (p) => (
-  <svg viewBox="0 0 200 200" aria-hidden="true" {...p}>
+  <svg className="art" viewBox="0 0 200 200" aria-hidden="true" {...p}>
     <ellipse cx="100" cy="186" rx="56" ry="6" fill={SHADOW} />
     <path d="M44 118C44 52 156 52 156 118" fill="none" stroke={INK} strokeWidth="11" strokeLinecap="round" />
     <path d="M56 112C58 66 142 66 144 112" fill="none" stroke={SOFT} strokeWidth="3" strokeLinecap="round" />
@@ -46,7 +46,7 @@ export const HeadphonesArt = (p) => (
 );
 
 export const LaptopArt = (p) => (
-  <svg viewBox="0 0 200 200" aria-hidden="true" {...p}>
+  <svg className="art" viewBox="0 0 200 200" aria-hidden="true" {...p}>
     <ellipse cx="100" cy="164" rx="82" ry="6" fill={SHADOW} />
     <rect x="38" y="42" width="124" height="86" rx="6" fill={INK} />
     <rect x="44" y="48" width="112" height="74" fill="#fff" />
@@ -62,7 +62,7 @@ export const LaptopArt = (p) => (
 );
 
 export const SneakerArt = (p) => (
-  <svg viewBox="0 0 200 160" aria-hidden="true" {...p}>
+  <svg className="art" viewBox="0 0 200 160" aria-hidden="true" {...p}>
     <ellipse cx="100" cy="146" rx="84" ry="5" fill={SHADOW} />
     <path d="M18 116h158c8 0 10 8 8 14l-2 6H22c-6 0-8-6-6-12z" fill="#fff" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
     <path d="M20 116c0-26 10-40 30-42l30-26c8-6 16-6 22 0l38 38c16 6 32 14 36 30z" fill="#fff" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
@@ -73,7 +73,7 @@ export const SneakerArt = (p) => (
 );
 
 export const WatchArt = (p) => (
-  <svg viewBox="0 0 200 200" aria-hidden="true" {...p}>
+  <svg className="art" viewBox="0 0 200 200" aria-hidden="true" {...p}>
     <rect x="80" y="10" width="40" height="56" rx="6" fill={INK} />
     <rect x="80" y="134" width="40" height="56" rx="6" fill={INK} />
     <path d="M86 22h28M86 34h28M86 168h28M86 180h28" stroke="#444" strokeWidth="2" />
@@ -87,7 +87,7 @@ export const WatchArt = (p) => (
 );
 
 export const BagArt = (p) => (
-  <svg viewBox="0 0 200 200" aria-hidden="true" {...p}>
+  <svg className="art" viewBox="0 0 200 200" aria-hidden="true" {...p}>
     <ellipse cx="100" cy="186" rx="70" ry="6" fill={SHADOW} />
     <path d="M70 84c0-44 60-44 60 0" fill="none" stroke={INK} strokeWidth="6" strokeLinecap="round" />
     <path d="M44 80h112l14 98H30z" fill="#f6f6f6" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
@@ -148,6 +148,8 @@ export const G = {
   spark:   (p) => <Glyph {...p}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></Glyph>,
   clock:   (p) => <Glyph {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Glyph>,
   shield:  (p) => <Glyph {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Glyph>,
+  sun:     (p) => <Glyph {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></Glyph>,
+  moon:    (p) => <Glyph {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></Glyph>,
   package: (p) => <Glyph {...p}><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></Glyph>,
   /* small gift-box ornament used under section titles */
   ornament:(p) => <Glyph size={18} sw={1.4} {...p}><rect x="4" y="9" width="16" height="11" /><path d="M2 9h20M12 9v11M12 9c-2-4-6-4-6-1s6 1 6 1 6 2 6-1-4-3-6 1" /></Glyph>,

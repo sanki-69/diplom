@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { login, register, setToken } from "../api.js";
 import { Logo } from "../components/Navbar.jsx";
 import { G, BagArt } from "../components/Art.jsx";
+import ThemeToggle from "../components/ThemeToggle.jsx";
 
 const GUEST_FEATURES  = ["Бараа хайх — 6 дэлгүүрээс", "Үнэ харьцуулах, хамгийн хямдыг олох", "AI чатаар асуух"];
 const MEMBER_FEATURES = ["Хайлтын түүх хадгалах", "Чатын яриаг хадгалах", "Хувийн тохиргоо"];
@@ -56,33 +57,33 @@ export default function AuthPage({ onAuth }) {
       <style>{`@media (max-width: 860px) { .auth-grid { grid-template-columns: 1fr !important; } .auth-left { display: none !important; } }`}</style>
 
       {/* ── LEFT: black brand panel ── */}
-      <div className="auth-left" style={{ background: "var(--ink)", color: "#fff", padding: "48px 56px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-        <Logo size={24} color="#fff" onClick={() => navigate("/search")} />
+      <div className="auth-left" style={{ background: "var(--ink)", color: "var(--on-ink)", padding: "48px 56px", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+        <Logo size={24} color="var(--on-ink)" onClick={() => navigate("/search")} />
 
         <div style={{ position: "absolute", right: -60, bottom: -40, width: 340, opacity: 0.08, filter: "invert(1)" }}>
           <BagArt />
         </div>
 
         <div style={{ marginTop: "auto", position: "relative" }}>
-          <div className="eyebrow" style={{ color: "#8a8a8a" }}>Онлайн худалдааны AI туслах</div>
+          <div className="eyebrow" style={{ color: "var(--on-ink-dim)" }}>Онлайн худалдааны AI туслах</div>
           <h1 style={{ fontSize: "clamp(40px, 5vw, 68px)", margin: "14px 0 30px", lineHeight: 1 }}>
-            Хайх.<br />Харьцуулах.<br /><span style={{ color: "transparent", WebkitTextStroke: "1px #fff" }}>Хэмнэх.</span>
+            Хайх.<br />Харьцуулах.<br /><span style={{ color: "transparent", WebkitTextStroke: "1px var(--on-ink)" }}>Хэмнэх.</span>
           </h1>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, maxWidth: 520 }}>
             <div>
-              <div className="eyebrow" style={{ color: "#8a8a8a", marginBottom: 12 }}>Бүртгэлгүйгээр</div>
+              <div className="eyebrow" style={{ color: "var(--on-ink-dim)", marginBottom: 12 }}>Бүртгэлгүйгээр</div>
               {GUEST_FEATURES.map(t => (
-                <div key={t} style={{ display: "flex", gap: 10, fontSize: 12.5, marginBottom: 9, color: "#e8e8e8" }}>
-                  <span style={{ color: "#fff" }}>—</span>{t}
+                <div key={t} style={{ display: "flex", gap: 10, fontSize: 12.5, marginBottom: 9, color: "var(--on-ink)" }}>
+                  <span style={{ color: "var(--on-ink)" }}>—</span>{t}
                 </div>
               ))}
             </div>
             <div>
-              <div className="eyebrow" style={{ color: "#8a8a8a", marginBottom: 12 }}>Бүртгэлтэй бол</div>
+              <div className="eyebrow" style={{ color: "var(--on-ink-dim)", marginBottom: 12 }}>Бүртгэлтэй бол</div>
               {MEMBER_FEATURES.map(t => (
-                <div key={t} style={{ display: "flex", gap: 10, fontSize: 12.5, marginBottom: 9, color: "#bdbdbd" }}>
-                  <span style={{ color: "#fff" }}>+</span>{t}
+                <div key={t} style={{ display: "flex", gap: 10, fontSize: 12.5, marginBottom: 9, color: "var(--on-ink-mute)" }}>
+                  <span style={{ color: "var(--on-ink)" }}>+</span>{t}
                 </div>
               ))}
             </div>
@@ -91,7 +92,8 @@ export default function AuthPage({ onAuth }) {
       </div>
 
       {/* ── RIGHT: form ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 24px", position: "relative" }}>
+        <ThemeToggle style={{ position: "absolute", top: 20, right: 20 }} />
         <div className="fade-up" style={{ width: "100%", maxWidth: 380 }}>
           <div className="tabs" style={{ marginBottom: 34 }}>
             {[
@@ -118,7 +120,7 @@ export default function AuthPage({ onAuth }) {
               autoComplete={mode === "login" ? "current-password" : "new-password"} />
 
             {error && (
-              <div role="alert" style={{ borderLeft: "3px solid var(--sale)", background: "#fdf2f3", padding: "10px 14px", color: "var(--sale)", fontSize: 12.5, marginBottom: 18 }}>
+              <div role="alert" style={{ borderLeft: "3px solid var(--sale)", background: "var(--sale-bg)", padding: "10px 14px", color: "var(--sale)", fontSize: 12.5, marginBottom: 18 }}>
                 {error}
               </div>
             )}

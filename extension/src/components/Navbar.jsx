@@ -1,16 +1,17 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { G } from "./Art.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 
 /* Thin black announcement bar above the header (scrolls away). */
 export function TopBar() {
   return (
     <div style={{
-      background: "var(--ink)", color: "#fff",
+      background: "var(--ink)", color: "var(--on-ink)",
       fontSize: 10.5, fontWeight: 500, letterSpacing: "0.08em",
     }}>
       <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: 34 }}>
         <span>Монгол хэлээр AI хайлт · 6 дэлгүүрийн үнийг нэг дор</span>
-        <span className="hide-sm" style={{ display: "flex", gap: 18, color: "#bbb" }}>
+        <span className="hide-sm" style={{ display: "flex", gap: 18, color: "var(--on-ink-mute)" }}>
           <span>МОНГОЛ</span>
           <span>₮ MNT</span>
         </span>
@@ -49,7 +50,7 @@ export default function Navbar({ user, onLogout, chatOpen, onToggleChat }) {
   return (
     <header style={{
       position: "sticky", top: 0, zIndex: 100,
-      background: "rgba(255,255,255,0.96)",
+      background: "var(--header-bg)",
       backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
       borderBottom: "1px solid var(--line)",
     }}>
@@ -92,6 +93,8 @@ export default function Navbar({ user, onLogout, chatOpen, onToggleChat }) {
             </button>
           )}
 
+          <ThemeToggle style={{ border: "none" }} />
+
           {/* Black block — like the template's cart box — toggles the AI assistant */}
           <button
             onClick={onToggleChat}
@@ -100,7 +103,7 @@ export default function Navbar({ user, onLogout, chatOpen, onToggleChat }) {
             style={{
               height: "var(--header-h)", padding: "0 26px",
               background: chatOpen ? "var(--paper)" : "var(--ink)",
-              color: chatOpen ? "var(--ink)" : "var(--paper)",
+              color: chatOpen ? "var(--ink)" : "var(--on-ink)",
               border: "none", borderLeft: "1px solid var(--ink)",
               display: "flex", alignItems: "center", gap: 10,
               fontSize: 11, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase",

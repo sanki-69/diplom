@@ -9,6 +9,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>AI SHOP — Монгол AI дэлгүүр</title>
+    <meta name="theme-color" content="#ffffff" />
+    <!-- Apply the saved (or system) colour theme before the page paints,
+         so dark-mode users never see a white flash. Logic mirrors src/theme.js -->
+    <script>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem("theme"); } catch (e) {}
+        if (t !== "light" && t !== "dark") {
+          t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "dark" ? "#0f0f0f" : "#ffffff");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

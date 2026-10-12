@@ -31,12 +31,12 @@ function LoginGate({ onNavigate }) {
 
 function Footer() {
   return (
-    <footer style={{ background: "var(--ink)", color: "#bdbdbd", marginTop: "auto" }}>
+    <footer style={{ background: "var(--ink)", color: "var(--on-ink-mute)", marginTop: "auto" }}>
       <div className="container" style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         gap: 20, flexWrap: "wrap", padding: "34px 32px",
       }}>
-        <Logo size={20} color="#fff" />
+        <Logo size={20} color="var(--on-ink)" />
         <span style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase" }}>
           AliExpress · Amazon · eBay · Walmart · BestBuy · Newegg
         </span>

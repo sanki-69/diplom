@@ -2336,6 +2336,25 @@ def _json_raw(txt: str, marker: str) -> Optional[dict]:
     except Exception:
         return None
 
+_AMAZON_PLACEHOLDER_RE = re.compile(r"\.svg(\?|$)|/x-locale/common/|grey-pixel|transparent-pixel|/sprites?/", re.I)
+
+def _amazon_card_image(card) -> str:
+    """Real product photo from an Amazon result card.
+    A card holds several <img>: a lazy-loading placeholder (its data-src is a
+    small SVG icon), the icon itself, and the actual photo. Skip placeholders
+    and icons; prefer the largest srcset entry, then src / data-src."""
+    for img in card.select("img.s-image, img[data-image-latency], img"):
+        candidates = []
+        srcset = img.get("srcset") or ""
+        if srcset:   # "url1 1x, url2 1.5x, url3 2x" → largest last
+            candidates += [part.strip().split(" ")[0] for part in srcset.split(",")][::-1]
+        candidates += [img.get("src") or "", img.get("data-src") or ""]
+        for url in candidates:
+            url = url.strip()
+            if url.startswith("http") and not _AMAZON_PLACEHOLDER_RE.search(url):
+                return url
+    return ""
+
 def _scrape_amazon(soup: BeautifulSoup, _: str) -> list:
     results = []
     # Strategy 1: embedded search result JSON (Amazon sometimes embeds it)
@@ -2400,14 +2419,7 @@ def _scrape_amazon(soup: BeautifulSoup, _: str) -> list:
         title = title_el.get_text(strip=True)
         if not title or len(title) < 5:
             continue
-        # Amazon lazy-loads images; real URL is in data-src, not src (which is a placeholder)
-        img_url = ""
-        if img_el:
-            for attr in ("data-src", "src"):
-                v = (img_el.get(attr) or "").strip()
-                if v and not v.startswith("data:"):
-                    img_url = v
-                    break
+        img_url = _amazon_card_image(card)
         results.append(_make_item(
             title,
             price_text,

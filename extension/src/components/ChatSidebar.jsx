@@ -253,7 +253,7 @@ function ChatPanel({ user, contextProduct, onSearch, onFilter, isOnSearchPage, a
                   <span style={{ fontSize: 10.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
                   <span style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
                     <span style={{ fontFamily: "var(--display)", fontSize: 13 }}>{toMNT(r.price, r.price_text)}</span>
-                    <span style={{ background: "var(--ink)", color: "#fff", fontSize: 8.5, fontWeight: 700, letterSpacing: ".08em", padding: "1px 5px", textTransform: "uppercase" }}>{r.source}</span>
+                    <span style={{ background: "var(--ink)", color: "var(--on-ink)", fontSize: 8.5, fontWeight: 700, letterSpacing: ".08em", padding: "1px 5px", textTransform: "uppercase" }}>{r.source}</span>
                   </span>
                 </a>
               ))}
@@ -288,7 +288,7 @@ function ChatPanel({ user, contextProduct, onSearch, onFilter, isOnSearchPage, a
         <div style={{ padding: "0 14px 10px", display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
           {quickPrompts.map(p => (
             <button key={p} onClick={() => handleSend(p)} style={chipStyle}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--ink)"; e.currentTarget.style.background = "var(--ink)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--ink)"; e.currentTarget.style.background = "var(--ink)"; e.currentTarget.style.color = "var(--on-ink)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--paper)"; e.currentTarget.style.color = "var(--ink-2)"; }}
             >{p}</button>
           ))}
@@ -343,12 +343,12 @@ export default function ChatSidebar({ user, contextProduct = null, open = true, 
         transform: open ? "translateX(0)" : "translateX(100%)",
         visibility: open ? "visible" : "hidden",
         transition: "transform .32s var(--ease), visibility .32s",
-        boxShadow: open ? "-20px 0 40px -30px rgba(0,0,0,.5)" : "none",
+        boxShadow: open ? "-20px 0 40px -30px var(--shadow)" : "none",
       }}
     >
       {/* Black header — same height as the top bar + site header */}
       <div style={{
-        background: "var(--ink)", color: "#fff", flexShrink: 0,
+        background: "var(--ink)", color: "var(--on-ink)", flexShrink: 0,
         height: "calc(34px + var(--header-h))", padding: "0 20px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
@@ -356,15 +356,15 @@ export default function ChatSidebar({ user, contextProduct = null, open = true, 
           <div style={{ fontFamily: "var(--display)", fontSize: 24, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", lineHeight: 1 }}>
             AI туслах
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#aaa" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--on-ink-mute)" }}>
             <span style={{ width: 6, height: 6, background: "#3ddc84", display: "inline-block" }} />
             Онлайн · Монгол хэлээр
           </div>
         </div>
         <button onClick={onToggle} aria-label="Хаах"
-          style={{ width: 36, height: 36, background: "transparent", border: "1px solid #444", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "var(--ink)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#fff"; }}
+          style={{ width: 36, height: 36, background: "transparent", border: "1px solid var(--on-ink-dim)", color: "var(--on-ink)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--on-ink)"; e.currentTarget.style.color = "var(--ink)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--on-ink)"; }}
         >
           <G.x size={15} />
         </button>

@@ -36,3 +36,16 @@ def test_dedupe_removes_repeated_products():
         ("eBay", "https://ebay.com/itm/1"),
         ("Amazon", "https://amazon.com/dp/A3"),
     ]
+
+
+def test_amazon_card_image_skips_placeholders():
+    from bs4 import BeautifulSoup
+    html = """<div data-component-type="s-search-result">
+      <img class="s-image a-lazy-loaded" src="https://images-na.ssl-images-amazon.com/images/G/01/x-locale/common/grey-pixel.gif"
+           data-src="https://m.media-amazon.com/images/I/01rrzVoKd5L.svg">
+      <img src="https://m.media-amazon.com/images/I/01rrzVoKd5L.svg">
+      <img class="s-image" src="https://m.media-amazon.com/images/I/518H._AC_SX148_.jpg"
+           srcset="https://m.media-amazon.com/images/I/518H._AC_SX148_.jpg 1x, https://m.media-amazon.com/images/I/518H._AC_SX444_.jpg 3x">
+    </div>"""
+    card = BeautifulSoup(html, "html.parser").select_one("div")
+    assert main._amazon_card_image(card) == "https://m.media-amazon.com/images/I/518H._AC_SX444_.jpg"
